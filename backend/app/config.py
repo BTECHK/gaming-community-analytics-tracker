@@ -21,15 +21,8 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "CommunityPulse API"
 
-    # Reddit API credentials
-    reddit_client_id: str = ""
-    reddit_client_secret: str = ""
-    reddit_user_agent: str = "communitypulse:v0.1.0 (by /u/communitypulse_dev)"
-
-    # Reddit ingestion settings
-    reddit_subreddits: list[str] = ["gamecommunity"]
-    reddit_fetch_limit: int = 100
-    reddit_fetch_interval_minutes: int = 5
+    # YouTube API credentials (to be configured in Phase 2)
+    # youtube_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
