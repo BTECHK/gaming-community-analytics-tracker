@@ -1,0 +1,41 @@
+# Database credentials - KEEP THIS PRIVATE
+docs/claude-brainstorm/Databaseinfo.txt
+
+# Environment files - NEVER COMMIT
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log
+.svelte-kit/
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Security-sensitive
+secrets/
+*.pem
+*.key
