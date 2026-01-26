@@ -15,9 +15,10 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup: application ready
-    yield
-    # Shutdown: cleanup if needed
+    from app.ingestion.scheduler import scheduler_lifespan
+
+    async with scheduler_lifespan():
+        yield
 
 
 def create_app() -> FastAPI:
