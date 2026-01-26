@@ -1,0 +1,16 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore tests in build (can include later if needed)
+tests/
+
+# Ignore IDE
+.vscode/
+.idea/
