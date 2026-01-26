@@ -1,1 +1,5 @@
-"""Data ingestion module for fetching posts from external platforms."""
+"""Data ingestion module."""
+
+from app.ingestion.service import IngestionService, upsert_posts
+
+__all__ = ["IngestionService", "upsert_posts"]
