@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     # Reddit ingestion settings
     reddit_subreddits: list[str] = ["gamecommunity"]
     reddit_fetch_limit: int = 100
+    reddit_fetch_interval_minutes: int = 5
 
     model_config = SettingsConfigDict(
         env_file=".env",

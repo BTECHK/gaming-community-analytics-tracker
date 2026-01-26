@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.28.0",
     "asyncpraw>=7.8.0",
     "tenacity>=9.0.0",
+    "apscheduler>=3.11.0",
 ]
 
 [project.optional-dependencies]
