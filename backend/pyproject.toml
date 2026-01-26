@@ -12,6 +12,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "secweb>=1.0.0",
     "httpx>=0.28.0",
+    "asyncpraw>=7.8.0",
+    "tenacity>=9.0.0",
 ]
 
 [project.optional-dependencies]
