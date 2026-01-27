@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     # GuideSite Scraping
     guidesite_fetch_limit: int = 50  # Max guides per fetch
 
+    # NLP Pipeline
+    nlp_batch_size: int = 32
+    nlp_chunk_size: int = 1000
+    nlp_result_ttl_hours: int = 48
+    nlp_enabled: bool = True
+
     @property
     def google_trends_keywords_list(self) -> list[str]:
         """Parse comma-separated keywords into list."""

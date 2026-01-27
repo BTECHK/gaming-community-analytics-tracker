@@ -17,6 +17,7 @@ from app.ingestion.adapters import (
     GuideSiteAdapter,
 )
 from app.ingestion.service import IngestionService
+from app.nlp import NLPService
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +189,37 @@ async def guidesite_ingestion_job() -> None:
             await session.close()
 
 
+async def sentiment_analysis_job() -> None:
+    """Scheduled job to run sentiment analysis on unprocessed posts.
+
+    Runs every 6 hours with 30min offset to ensure ingestion completes first.
+    """
+    settings = get_settings()
+
+    if not settings.nlp_enabled:
+        logger.info("NLP pipeline disabled, skipping sentiment analysis")
+        return
+
+    logger.info("Starting scheduled sentiment analysis")
+
+    engine = get_engine()
+    session_factory = get_session_factory(engine)
+
+    async with session_factory() as session:
+        try:
+            service = NLPService(session)
+            result = await service.process_batch()
+
+            logger.info(
+                "Sentiment analysis complete: processed=%d",
+                result.get("processed", 0),
+            )
+        except Exception as e:
+            logger.error("Sentiment analysis job failed: %s", e)
+        finally:
+            await session.close()
+
+
 def configure_scheduler() -> None:
     """Configure scheduler with ingestion jobs."""
     settings = get_settings()
@@ -252,6 +284,21 @@ def configure_scheduler() -> None:
         replace_existing=True,
     )
     logger.info("Scheduled GuideSite ingestion job (every 6 hours)")
+
+    # Sentiment analysis job (configurable, runs with offset after ingestion)
+    if settings.nlp_enabled:
+        scheduler.add_job(
+            sentiment_analysis_job,
+            "interval",
+            hours=6,
+            minutes=30,  # 30min offset to run after ingestion jobs complete
+            id="sentiment_analysis",
+            name="Sentiment Analysis",
+            replace_existing=True,
+        )
+        logger.info("Scheduled sentiment analysis job (every 6 hours + 30min offset)")
+    else:
+        logger.info("NLP pipeline disabled, skipping sentiment analysis job")
 
 
 @asynccontextmanager

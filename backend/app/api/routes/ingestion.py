@@ -19,6 +19,7 @@ from app.ingestion.adapters import (
     GuideSiteAdapter,
 )
 from app.ingestion.service import IngestionService
+from app.nlp import NLPService
 
 logger = logging.getLogger(__name__)
 
@@ -381,3 +382,72 @@ async def get_quota_status(platform: str = "youtube") -> QuotaStatus:
         remaining=quota.remaining,
         daily_limit=settings.youtube_daily_quota_limit,
     )
+
+
+# =============================================================================
+# NLP endpoints
+# =============================================================================
+
+
+class NLPStatusResponse(BaseModel):
+    """Response model for NLP status."""
+
+    total_posts: int
+    with_valid_sentiment: int
+    needs_analysis: int
+    config: dict
+
+
+class NLPSentimentResponse(BaseModel):
+    """Response model for sentiment analysis trigger."""
+
+    processed: int
+    status: str
+
+
+@router.get("/nlp/status")
+async def get_nlp_status(session: SessionDep) -> NLPStatusResponse:
+    """Get NLP processing status and configuration.
+
+    Returns statistics on posts with/without sentiment analysis
+    and current NLP configuration settings.
+    """
+    service = NLPService(session)
+    stats = await service.get_stats()
+
+    return NLPStatusResponse(
+        total_posts=stats["total_posts"],
+        with_valid_sentiment=stats["with_valid_sentiment"],
+        needs_analysis=stats["needs_analysis"],
+        config=stats["config"],
+    )
+
+
+@router.post("/nlp/sentiment")
+async def trigger_sentiment_analysis(session: SessionDep) -> NLPSentimentResponse:
+    """Manually trigger sentiment analysis on unprocessed posts.
+
+    Processes posts that either have no sentiment result or have
+    an expired sentiment result (past TTL).
+
+    Returns the number of posts processed.
+    """
+    settings = get_settings()
+
+    if not settings.nlp_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="NLP pipeline is disabled. Set NLP_ENABLED=true in .env",
+        )
+
+    try:
+        service = NLPService(session)
+        result = await service.process_batch()
+
+        return NLPSentimentResponse(
+            processed=result["processed"],
+            status=result["status"],
+        )
+    except Exception as e:
+        logger.error("Manual sentiment analysis failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
