@@ -14,9 +14,12 @@ from app.models.post import Platform, Post
 logger = logging.getLogger(__name__)
 
 
-def _platform_from_string(platform: str) -> Platform:
-    """Convert platform string to Platform enum."""
-    return Platform(platform.lower())
+def _platform_from_string(platform: str) -> str:
+    """Validate and normalize platform string."""
+    normalized = platform.lower()
+    # Validate it's a known platform
+    Platform(normalized)
+    return normalized
 
 
 async def upsert_posts(

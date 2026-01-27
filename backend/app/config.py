@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,10 +24,24 @@ class Settings(BaseSettings):
 
     # YouTube API
     youtube_api_key: str = ""
-    youtube_channel_ids: list[str] = []  # e.g., ["UC2t5bjwHdUX4vM2g8TRDq5g"]
-    youtube_search_queries: list[str] = []  # e.g., ["gaming"]
+    youtube_channel_ids: str = ""  # Comma-separated channel IDs
+    youtube_search_queries: str = ""  # Comma-separated search queries
     youtube_fetch_limit: int = 50  # Videos per channel
     youtube_daily_quota_limit: int = 9000  # Safety buffer below 10k free tier
+
+    @property
+    def youtube_channel_ids_list(self) -> list[str]:
+        """Parse comma-separated channel IDs into list."""
+        if not self.youtube_channel_ids:
+            return []
+        return [x.strip() for x in self.youtube_channel_ids.split(",") if x.strip()]
+
+    @property
+    def youtube_search_queries_list(self) -> list[str]:
+        """Parse comma-separated search queries into list."""
+        if not self.youtube_search_queries:
+            return []
+        return [x.strip() for x in self.youtube_search_queries.split(",") if x.strip()]
 
     model_config = SettingsConfigDict(
         env_file=".env",

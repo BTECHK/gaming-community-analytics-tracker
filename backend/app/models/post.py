@@ -37,7 +37,13 @@ class Post(Base):
         UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4())
     )
     platform: Mapped[str] = mapped_column(
-        SQLEnum(Platform, name="platform_enum"), nullable=False, index=True
+        SQLEnum(
+            Platform,
+            name="platform_enum",
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        nullable=False,
+        index=True,
     )
     external_id: Mapped[str] = mapped_column(
         String(255), nullable=False, index=True
