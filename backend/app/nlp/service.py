@@ -10,6 +10,7 @@ from sqlalchemy.sql import func
 from app.config import get_settings
 from app.models import Post, SentimentResult, SentimentLabel
 from app.nlp.sentiment import SentimentAnalyzer, SentimentScore
+from app.nlp.topics import TopicDetector, TopicResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,22 +22,35 @@ class NLPService:
     and storing results with TTL-based cache invalidation.
     """
 
-    def __init__(self, session: AsyncSession, analyzer: SentimentAnalyzer | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        analyzer: SentimentAnalyzer | None = None,
+        topic_detector: TopicDetector | None = None,
+    ):
         """Initialize NLP service.
 
         Args:
             session: Database session for queries.
             analyzer: Optional pre-initialized analyzer (for reuse across batches).
+            topic_detector: Optional pre-initialized topic detector.
         """
         self.session = session
         self.settings = get_settings()
         self._analyzer = analyzer
+        self._topic_detector = topic_detector
 
     def _get_analyzer(self) -> SentimentAnalyzer:
         """Get or create sentiment analyzer."""
         if self._analyzer is None:
             self._analyzer = SentimentAnalyzer(batch_size=self.settings.nlp_batch_size)
         return self._analyzer
+
+    def _get_topic_detector(self) -> TopicDetector:
+        """Get or create topic detector."""
+        if self._topic_detector is None:
+            self._topic_detector = TopicDetector(batch_size=self.settings.nlp_batch_size)
+        return self._topic_detector
 
     async def get_unprocessed_posts(self, limit: int | None = None) -> list[Post]:
         """Get posts that need sentiment analysis.
@@ -97,7 +111,7 @@ class NLPService:
         return ""
 
     async def analyze_posts(self, posts: list[Post]) -> list[SentimentResult]:
-        """Run sentiment analysis on posts and store results.
+        """Run sentiment analysis and topic detection on posts and store results.
 
         Args:
             posts: Posts to analyze.
@@ -109,6 +123,7 @@ class NLPService:
             return []
 
         analyzer = self._get_analyzer()
+        topic_detector = self._get_topic_detector()
         ttl_hours = self.settings.nlp_result_ttl_hours
 
         # Extract text from posts
@@ -116,13 +131,14 @@ class NLPService:
 
         # Run batch analysis
         scores = analyzer.analyze_batch(texts)
+        topic_results = topic_detector.detect_batch(texts)
 
         # Create result objects
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(hours=ttl_hours)
 
         results: list[SentimentResult] = []
-        for post, score in zip(posts, scores):
+        for post, score, topic_result in zip(posts, scores, topic_results):
             # Map label string to enum
             label = SentimentLabel(score.label)
 
@@ -131,6 +147,7 @@ class NLPService:
                 label=label,
                 confidence=score.confidence,
                 scores=score.scores,
+                topics=topic_result.to_json(),
                 model_name=analyzer.model_name,
                 analyzed_at=now,
                 expires_at=expires_at,
@@ -139,7 +156,7 @@ class NLPService:
             results.append(result)
 
         await self.session.commit()
-        logger.info("Stored %d sentiment results", len(results))
+        logger.info("Stored %d sentiment results with topics", len(results))
 
         return results
 
