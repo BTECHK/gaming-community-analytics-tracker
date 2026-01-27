@@ -21,8 +21,12 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "CommunityPulse API"
 
-    # YouTube API credentials (to be configured in Phase 2)
-    # youtube_api_key: str = ""
+    # YouTube API
+    youtube_api_key: str = ""
+    youtube_channel_ids: list[str] = []  # e.g., ["UC2t5bjwHdUX4vM2g8TRDq5g"]
+    youtube_search_queries: list[str] = []  # e.g., ["gaming"]
+    youtube_fetch_limit: int = 50  # Videos per channel
+    youtube_daily_quota_limit: int = 9000  # Safety buffer below 10k free tier
 
     model_config = SettingsConfigDict(
         env_file=".env",
