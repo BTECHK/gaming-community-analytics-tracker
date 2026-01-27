@@ -2,10 +2,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies for asyncpg
+# Install system dependencies for asyncpg and hdbscan (C extensions)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
     libpq-dev \
+    libc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy all files (need package structure for hatchling)
