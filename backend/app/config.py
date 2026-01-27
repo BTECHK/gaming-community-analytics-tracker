@@ -29,6 +29,27 @@ class Settings(BaseSettings):
     youtube_fetch_limit: int = 50  # Videos per channel
     youtube_daily_quota_limit: int = 9000  # Safety buffer below 10k free tier
 
+    # OfficialNews News (rito-news-feeds)
+    riot_locale: str = "en-us"  # Locale for rito-news-feeds API
+    riot_fetch_limit: int = 50  # Max items per fetch
+
+    # TierSite Scraping
+    tiersite_fetch_limit: int = 50  # Max items per fetch
+
+    # Google Trends
+    google_trends_keywords: str = "gaming,the game patch notes,the game tier list,the game champions"
+    google_trends_enabled: bool = True  # Can disable if pytrends breaks
+
+    # GuideSite Scraping
+    guidesite_fetch_limit: int = 50  # Max guides per fetch
+
+    @property
+    def google_trends_keywords_list(self) -> list[str]:
+        """Parse comma-separated keywords into list."""
+        if not self.google_trends_keywords:
+            return []
+        return [x.strip() for x in self.google_trends_keywords.split(",") if x.strip()]
+
     @property
     def youtube_channel_ids_list(self) -> list[str]:
         """Parse comma-separated channel IDs into list."""
