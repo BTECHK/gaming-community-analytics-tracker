@@ -7,6 +7,10 @@ from app.ingestion.adapters.youtube import (
     YouTubeQuotaTracker,
     get_quota_tracker,
 )
+from app.ingestion.adapters.official_news import RiotAdapter
+from app.ingestion.adapters.tiersite import TierSiteAdapter
+from app.ingestion.adapters.google_trends import GoogleTrendsAdapter
+from app.ingestion.adapters.guidesite import GuideSiteAdapter
 
 __all__ = [
     "DataSourceAdapter",
@@ -15,4 +19,8 @@ __all__ = [
     "YouTubeQuotaError",
     "YouTubeQuotaTracker",
     "get_quota_tracker",
+    "RiotAdapter",
+    "TierSiteAdapter",
+    "GoogleTrendsAdapter",
+    "GuideSiteAdapter",
 ]
