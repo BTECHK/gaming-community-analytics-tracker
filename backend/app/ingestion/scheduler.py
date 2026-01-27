@@ -18,6 +18,7 @@ from app.ingestion.adapters import (
 )
 from app.ingestion.service import IngestionService
 from app.nlp import NLPService
+from app.dashboard import AggregationService
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,31 @@ async def sentiment_analysis_job() -> None:
             await session.close()
 
 
+async def aggregation_job() -> None:
+    """Scheduled job to aggregate topic sentiment data.
+
+    Runs 1 hour after sentiment analysis to ensure data is fresh.
+    """
+    logger.info("Starting scheduled topic aggregation")
+
+    engine = get_engine()
+    session_factory = get_session_factory(engine)
+
+    async with session_factory() as session:
+        try:
+            service = AggregationService(session)
+            aggregations = await service.aggregate_topics(period_days=7, min_posts=3)
+
+            logger.info(
+                "Topic aggregation complete: topics=%d",
+                len(aggregations),
+            )
+        except Exception as e:
+            logger.error("Topic aggregation job failed: %s", e)
+        finally:
+            await session.close()
+
+
 def configure_scheduler() -> None:
     """Configure scheduler with ingestion jobs."""
     settings = get_settings()
@@ -297,6 +323,18 @@ def configure_scheduler() -> None:
             replace_existing=True,
         )
         logger.info("Scheduled sentiment analysis job (every 6 hours + 30min offset)")
+
+        # Aggregation job (runs after sentiment analysis)
+        scheduler.add_job(
+            aggregation_job,
+            "interval",
+            hours=6,
+            minutes=45,  # 15min after sentiment analysis
+            id="topic_aggregation",
+            name="Topic Aggregation",
+            replace_existing=True,
+        )
+        logger.info("Scheduled topic aggregation job (every 6 hours + 45min offset)")
     else:
         logger.info("NLP pipeline disabled, skipping sentiment analysis job")
 
