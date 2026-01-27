@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.models import Post, SentimentResult, SentimentLabel
 from app.nlp.sentiment import SentimentAnalyzer, SentimentScore
 from app.nlp.topics import TopicDetector, TopicResult
+from app.nlp.toxicity import ToxicityDetector, ToxicityResult
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class NLPService:
         session: AsyncSession,
         analyzer: SentimentAnalyzer | None = None,
         topic_detector: TopicDetector | None = None,
+        toxicity_detector: ToxicityDetector | None = None,
     ):
         """Initialize NLP service.
 
@@ -34,11 +36,13 @@ class NLPService:
             session: Database session for queries.
             analyzer: Optional pre-initialized analyzer (for reuse across batches).
             topic_detector: Optional pre-initialized topic detector.
+            toxicity_detector: Optional pre-initialized toxicity detector.
         """
         self.session = session
         self.settings = get_settings()
         self._analyzer = analyzer
         self._topic_detector = topic_detector
+        self._toxicity_detector = toxicity_detector
 
     def _get_analyzer(self) -> SentimentAnalyzer:
         """Get or create sentiment analyzer."""
@@ -51,6 +55,12 @@ class NLPService:
         if self._topic_detector is None:
             self._topic_detector = TopicDetector(batch_size=self.settings.nlp_batch_size)
         return self._topic_detector
+
+    def _get_toxicity_detector(self) -> ToxicityDetector:
+        """Get or create toxicity detector."""
+        if self._toxicity_detector is None:
+            self._toxicity_detector = ToxicityDetector(batch_size=self.settings.nlp_batch_size)
+        return self._toxicity_detector
 
     async def get_unprocessed_posts(self, limit: int | None = None) -> list[Post]:
         """Get posts that need sentiment analysis.
@@ -111,19 +121,23 @@ class NLPService:
         return ""
 
     async def analyze_posts(self, posts: list[Post]) -> list[SentimentResult]:
-        """Run sentiment analysis and topic detection on posts and store results.
+        """Run sentiment, topic, and toxicity analysis on posts and store results.
+
+        Toxic posts (interpersonal attacks, threats, harassment) are deleted
+        from the database rather than stored.
 
         Args:
             posts: Posts to analyze.
 
         Returns:
-            List of created SentimentResult objects.
+            List of created SentimentResult objects (non-toxic only).
         """
         if not posts:
             return []
 
         analyzer = self._get_analyzer()
         topic_detector = self._get_topic_detector()
+        toxicity_detector = self._get_toxicity_detector()
         ttl_hours = self.settings.nlp_result_ttl_hours
 
         # Extract text from posts
@@ -132,13 +146,23 @@ class NLPService:
         # Run batch analysis
         scores = analyzer.analyze_batch(texts)
         topic_results = topic_detector.detect_batch(texts)
+        toxicity_results = toxicity_detector.detect_batch(texts)
 
         # Create result objects
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(hours=ttl_hours)
 
         results: list[SentimentResult] = []
-        for post, score, topic_result in zip(posts, scores, topic_results):
+        toxic_posts: list[Post] = []
+
+        for post, score, topic_result, toxicity_result in zip(
+            posts, scores, topic_results, toxicity_results
+        ):
+            # Filter out toxic posts - delete them instead of storing
+            if toxicity_result.is_toxic:
+                toxic_posts.append(post)
+                continue
+
             # Map label string to enum
             label = SentimentLabel(score.label)
 
@@ -148,6 +172,8 @@ class NLPService:
                 confidence=score.confidence,
                 scores=score.scores,
                 topics=topic_result.to_json(),
+                is_toxic=False,
+                toxicity_score=toxicity_result.toxicity_score,
                 model_name=analyzer.model_name,
                 analyzed_at=now,
                 expires_at=expires_at,
@@ -155,8 +181,15 @@ class NLPService:
             self.session.add(result)
             results.append(result)
 
+        # Delete toxic posts from database
+        for post in toxic_posts:
+            await self.session.delete(post)
+
         await self.session.commit()
-        logger.info("Stored %d sentiment results with topics", len(results))
+
+        if toxic_posts:
+            logger.info("Filtered out %d toxic posts", len(toxic_posts))
+        logger.info("Stored %d sentiment results", len(results))
 
         return results
 
@@ -172,13 +205,16 @@ class NLPService:
 
         if not posts:
             logger.info("No posts need sentiment analysis")
-            return {"processed": 0, "status": "complete"}
+            return {"processed": 0, "filtered_toxic": 0, "status": "complete"}
 
         logger.info("Processing %d posts for sentiment analysis", len(posts))
+        initial_count = len(posts)
         results = await self.analyze_posts(posts)
+        filtered_count = initial_count - len(results)
 
         return {
             "processed": len(results),
+            "filtered_toxic": filtered_count,
             "status": "complete",
         }
 

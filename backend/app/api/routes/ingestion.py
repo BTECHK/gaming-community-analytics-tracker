@@ -402,6 +402,7 @@ class NLPSentimentResponse(BaseModel):
     """Response model for sentiment analysis trigger."""
 
     processed: int
+    filtered_toxic: int
     status: str
 
 
@@ -446,6 +447,7 @@ async def trigger_sentiment_analysis(session: SessionDep) -> NLPSentimentRespons
 
         return NLPSentimentResponse(
             processed=result["processed"],
+            filtered_toxic=result["filtered_toxic"],
             status=result["status"],
         )
     except Exception as e:
