@@ -163,7 +163,7 @@ class NLPService:
                 toxic_posts.append(post)
                 continue
 
-            # Map label string to enum
+            # Map label string to enum (score.label is lowercase: "positive", "neutral", "negative")
             label = SentimentLabel(score.label)
 
             result = SentimentResult(

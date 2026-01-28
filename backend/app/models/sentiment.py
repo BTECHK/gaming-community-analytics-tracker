@@ -13,11 +13,15 @@ from app.database import Base
 
 
 class SentimentLabel(str, enum.Enum):
-    """Sentiment classification labels."""
+    """Sentiment classification labels.
 
-    POSITIVE = "positive"
-    NEUTRAL = "neutral"
-    NEGATIVE = "negative"
+    Note: Names must be lowercase to match PostgreSQL enum values.
+    SQLAlchemy uses enum.name (not .value) when serializing to DB.
+    """
+
+    positive = "positive"
+    neutral = "neutral"
+    negative = "negative"
 
 
 def utcnow() -> datetime:
@@ -39,7 +43,12 @@ class SentimentResult(Base):
 
     # Sentiment scores
     label: Mapped[str] = mapped_column(
-        SQLEnum(SentimentLabel, name="sentiment_label_enum"), nullable=False
+        SQLEnum(
+            SentimentLabel,
+            name="sentiment_label_enum",
+            create_constraint=False,  # Don't create constraint, use existing DB enum
+        ),
+        nullable=False,
     )
     confidence: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0 to 1.0
 
