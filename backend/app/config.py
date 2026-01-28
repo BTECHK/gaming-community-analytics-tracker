@@ -71,9 +71,10 @@ class Settings(BaseSettings):
         return [x.strip() for x in self.youtube_search_queries.split(",") if x.strip()]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
