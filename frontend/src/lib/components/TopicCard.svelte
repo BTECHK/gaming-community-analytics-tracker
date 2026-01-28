@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Topic } from '$lib/types';
 	import SentimentBar from './SentimentBar.svelte';
+	import ConfidenceIndicator from './ConfidenceIndicator.svelte';
 
 	interface Props {
 		topic: Topic;
@@ -21,7 +22,10 @@
 <a href="/topics/{topic.slug}" class="topic-card">
 	<div class="card-header">
 		<h3 class="topic-name">{topic.name}</h3>
-		<span class="post-count">{topic.post_count} posts</span>
+		<div class="card-meta">
+			<ConfidenceIndicator confidence={topic.confidence} showLabel={false} compact={true} />
+			<span class="post-count">{topic.post_count} posts</span>
+		</div>
 	</div>
 
 	<div class="sentiment-section">
@@ -82,6 +86,12 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-bottom: var(--spacing-md);
+	}
+
+	.card-meta {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
 	}
 
 	.topic-name {

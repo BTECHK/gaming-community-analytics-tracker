@@ -8,7 +8,10 @@ import type {
 	Topic,
 	SourcesResponse,
 	AggregateResponse,
-	PatchPulseResponse
+	PatchPulseResponse,
+	VoteRequest,
+	ReportRequest,
+	FeedbackResponse
 } from './types';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -111,6 +114,26 @@ export const api = {
 			limit: options?.limit
 		});
 		return fetchApi<PatchPulseResponse>(endpoint);
+	},
+
+	/**
+	 * Submit a vote (thumbs up/down) on a topic summary
+	 */
+	async submitVote(request: VoteRequest): Promise<FeedbackResponse> {
+		return fetchApi<FeedbackResponse>('/feedback/vote', {
+			method: 'POST',
+			body: JSON.stringify(request)
+		});
+	},
+
+	/**
+	 * Submit a report for a topic summary
+	 */
+	async submitReport(request: ReportRequest): Promise<FeedbackResponse> {
+		return fetchApi<FeedbackResponse>('/feedback/report', {
+			method: 'POST',
+			body: JSON.stringify(request)
+		});
 	}
 };
 

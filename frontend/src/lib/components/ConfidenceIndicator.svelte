@@ -2,9 +2,11 @@
 	interface Props {
 		confidence: number | null;
 		showLabel?: boolean;
+		compact?: boolean;
+		postCount?: number;
 	}
 
-	let { confidence, showLabel = true }: Props = $props();
+	let { confidence, showLabel = true, compact = false, postCount }: Props = $props();
 
 	const level = $derived(() => {
 		if (confidence === null) return 'unknown';
@@ -22,9 +24,26 @@
 	});
 
 	const percentage = $derived(confidence !== null ? Math.round(confidence * 100) : null);
+
+	const tooltipText = $derived(() => {
+		const l = level();
+		const baseText = postCount
+			? `Based on sentiment analysis confidence across ${postCount} posts.`
+			: 'Based on sentiment analysis confidence across analyzed posts.';
+
+		if (l === 'low') {
+			return `${baseText} Low confidence may indicate mixed signals or limited data.`;
+		}
+		return baseText;
+	});
 </script>
 
-<div class="confidence" data-level={level()}>
+<div
+	class="confidence"
+	class:compact
+	data-level={level()}
+	title={tooltipText()}
+>
 	<div class="confidence-dots">
 		<span class="dot" class:active={confidence !== null && confidence >= 0.33}></span>
 		<span class="dot" class:active={confidence !== null && confidence >= 0.66}></span>
@@ -45,11 +64,20 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--spacing-sm);
+		cursor: help;
+	}
+
+	.confidence.compact {
+		gap: var(--spacing-xs);
 	}
 
 	.confidence-dots {
 		display: flex;
 		gap: 3px;
+	}
+
+	.compact .confidence-dots {
+		gap: 2px;
 	}
 
 	.dot {
@@ -58,6 +86,11 @@
 		border-radius: 50%;
 		background: var(--color-bg-secondary);
 		transition: background 0.2s ease;
+	}
+
+	.compact .dot {
+		width: 6px;
+		height: 6px;
 	}
 
 	.dot.active {

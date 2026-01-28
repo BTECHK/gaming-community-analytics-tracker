@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.middleware.security import SecurityHeadersMiddleware
-from app.api.routes import health, ingestion, dashboard
+from app.api.routes import health, ingestion, dashboard, feedback
 
 settings = get_settings()
 
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(ingestion.router, prefix="/api", tags=["ingestion"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
+    app.include_router(feedback.router, prefix="/api", tags=["feedback"])
 
     return app
 

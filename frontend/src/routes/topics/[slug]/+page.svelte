@@ -8,10 +8,13 @@
 	import QuoteCard from '$lib/components/QuoteCard.svelte';
 	import SourcesCard from '$lib/components/SourcesCard.svelte';
 	import FollowButton from '$lib/components/FollowButton.svelte';
+	import FeedbackButtons from '$lib/components/FeedbackButtons.svelte';
+	import ReportModal from '$lib/components/ReportModal.svelte';
 
 	let topic: Topic | null = $state(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let reportModalOpen = $state(false);
 
 	const slug = $derived($page.params.slug);
 
@@ -97,7 +100,19 @@
 				{#if topic.summary}
 					<p class="topic-summary">{topic.summary}</p>
 				{/if}
+				<div class="summary-feedback">
+					<span class="feedback-label">Was this summary helpful?</span>
+					<FeedbackButtons slug={topic.slug} onReport={() => reportModalOpen = true} />
+				</div>
 			</header>
+
+			<!-- Report Modal -->
+			<ReportModal
+				slug={topic.slug}
+				topicName={topic.name}
+				open={reportModalOpen}
+				onClose={() => reportModalOpen = false}
+			/>
 
 			<!-- Sentiment section -->
 			<section class="section sentiment-section">
@@ -245,6 +260,20 @@
 		color: var(--color-text-secondary);
 		margin: 0;
 		line-height: 1.6;
+	}
+
+	.summary-feedback {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		margin-top: var(--spacing-md);
+		padding-top: var(--spacing-md);
+		border-top: 1px solid var(--color-border);
+	}
+
+	.feedback-label {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-muted);
 	}
 
 	.section {

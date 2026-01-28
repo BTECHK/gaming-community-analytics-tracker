@@ -89,6 +89,33 @@ export interface FilterState {
 /** Theme preference */
 export type ThemeMode = 'dark' | 'light' | 'system';
 
+/** Vote type for feedback */
+export type VoteType = 'thumbs_up' | 'thumbs_down';
+
+/** Report reason */
+export type ReportReason = 'misleading' | 'inaccurate_quotes' | 'wrong_sentiment' | 'other';
+
+/** Vote request */
+export interface VoteRequest {
+	topic_slug: string;
+	vote_type: VoteType;
+	session_id: string;
+}
+
+/** Report request */
+export interface ReportRequest {
+	topic_slug: string;
+	reason: ReportReason;
+	details?: string;
+	session_id: string;
+}
+
+/** Feedback response */
+export interface FeedbackResponse {
+	success: boolean;
+	message: string;
+}
+
 /** Overall sentiment across all topics */
 export interface OverallSentiment {
 	positive: number;
