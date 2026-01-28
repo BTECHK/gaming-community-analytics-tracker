@@ -55,6 +55,11 @@ class AggregationService:
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=period_days)
 
+        # Get current patch version
+        from app.dashboard.patch_service import PatchService
+        patch_service = PatchService()
+        current_patch = await patch_service.get_current_patch()
+
         # Query posts with sentiment results
         stmt = (
             select(Post, SentimentResult)
@@ -156,6 +161,7 @@ class AggregationService:
                 aggregation.period_start = period_start
                 aggregation.period_end = now
                 aggregation.confidence_score = confidence_score
+                aggregation.patch_version = current_patch
             else:
                 # Create new
                 aggregation = Aggregation(
@@ -170,6 +176,7 @@ class AggregationService:
                     period_start=period_start,
                     period_end=now,
                     confidence_score=confidence_score,
+                    patch_version=current_patch,
                 )
                 self.session.add(aggregation)
 
@@ -264,6 +271,68 @@ class AggregationService:
         rows = result.all()
 
         return {row.platform.value: row.count for row in rows}
+
+    async def get_patch_pulse(
+        self,
+        patch_version: str,
+        limit: int = 10,
+    ) -> dict:
+        """Get patch-specific sentiment data.
+
+        Args:
+            patch_version: Patch version to filter by (e.g., "16.2").
+            limit: Maximum topics to return.
+
+        Returns:
+            Dict with topics, overall_sentiment, and total_posts.
+        """
+        # Query aggregations for this patch
+        stmt = (
+            select(Aggregation)
+            .where(Aggregation.patch_version == patch_version)
+            .order_by(Aggregation.post_count.desc())
+            .limit(limit)
+        )
+
+        result = await self.session.execute(stmt)
+        aggregations = list(result.scalars().all())
+
+        # Fallback: if no patch-specific aggregations, get all aggregations
+        if not aggregations:
+            stmt = (
+                select(Aggregation)
+                .order_by(Aggregation.post_count.desc())
+                .limit(limit)
+            )
+            result = await self.session.execute(stmt)
+            aggregations = list(result.scalars().all())
+
+        topics = [self._aggregation_to_dict(agg) for agg in aggregations]
+
+        # Calculate overall sentiment (weighted by post count)
+        total_posts = sum(agg.post_count for agg in aggregations)
+        if total_posts > 0:
+            weighted_positive = sum(
+                agg.sentiment_positive * agg.post_count for agg in aggregations
+            ) / total_posts
+            weighted_neutral = sum(
+                agg.sentiment_neutral * agg.post_count for agg in aggregations
+            ) / total_posts
+            weighted_negative = sum(
+                agg.sentiment_negative * agg.post_count for agg in aggregations
+            ) / total_posts
+        else:
+            weighted_positive = weighted_neutral = weighted_negative = 0
+
+        return {
+            "topics": topics,
+            "overall_sentiment": {
+                "positive": round(weighted_positive, 1),
+                "neutral": round(weighted_neutral, 1),
+                "negative": round(weighted_negative, 1),
+            },
+            "total_posts": total_posts,
+        }
 
     def _aggregation_to_dict(self, agg: Aggregation) -> dict:
         """Convert Aggregation model to API response dict.

@@ -9,6 +9,7 @@
 	import MentionsFeed from '$lib/components/MentionsFeed.svelte';
 	import TopicCloud from '$lib/components/TopicCloud.svelte';
 	import SourcesCard from '$lib/components/SourcesCard.svelte';
+	import FollowButton from '$lib/components/FollowButton.svelte';
 
 	// State
 	let topics: Topic[] = $state([]);
@@ -125,7 +126,12 @@
 					{#if topics.length > 0}
 						<div class="topic-grid">
 							{#each topics as topic (topic.slug)}
-								<TopicCard {topic} />
+								<div class="topic-card-wrapper">
+									<TopicCard {topic} />
+									<div class="topic-follow-action">
+										<FollowButton slug={topic.slug} name={topic.name} compact />
+									</div>
+								</div>
 							{/each}
 						</div>
 					{:else}
@@ -212,6 +218,17 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 		gap: var(--spacing-lg);
+	}
+
+	.topic-card-wrapper {
+		position: relative;
+	}
+
+	.topic-follow-action {
+		position: absolute;
+		top: var(--spacing-sm);
+		right: var(--spacing-sm);
+		z-index: 1;
 	}
 
 	.loading-state {

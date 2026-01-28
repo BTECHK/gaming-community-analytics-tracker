@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TopicNavItem } from '$lib/types';
 	import { page } from '$app/stores';
+	import { trackedTopics } from '$lib/stores/tracking.svelte';
 
 	interface Props {
 		topics: TopicNavItem[];
@@ -29,6 +30,29 @@
 					<polyline points="9 22 9 12 15 12 15 22" />
 				</svg>
 				<span>Dashboard</span>
+			</a>
+			<a
+				href="/patch-pulse"
+				class="nav-item"
+				class:active={currentPath === '/patch-pulse'}
+			>
+				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+				</svg>
+				<span>Patch Pulse</span>
+			</a>
+			<a
+				href="/tracker"
+				class="nav-item"
+				class:active={currentPath === '/tracker'}
+			>
+				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+				</svg>
+				<span>My Tracker</span>
+				{#if trackedTopics.current.length > 0}
+					<span class="badge">{trackedTopics.current.length}</span>
+				{/if}
 			</a>
 		</div>
 
@@ -175,6 +199,15 @@
 		color: var(--color-text-muted);
 		font-size: var(--font-size-sm);
 		font-style: italic;
+	}
+
+	.badge {
+		font-size: var(--font-size-xs);
+		background: var(--color-accent);
+		color: white;
+		padding: 2px 8px;
+		border-radius: var(--radius-full);
+		margin-left: auto;
 	}
 
 	.sidebar-footer {

@@ -7,6 +7,7 @@
 	import ConfidenceIndicator from '$lib/components/ConfidenceIndicator.svelte';
 	import QuoteCard from '$lib/components/QuoteCard.svelte';
 	import SourcesCard from '$lib/components/SourcesCard.svelte';
+	import FollowButton from '$lib/components/FollowButton.svelte';
 
 	let topic: Topic | null = $state(null);
 	let loading = $state(true);
@@ -25,6 +26,8 @@
 	});
 
 	async function loadTopic() {
+		if (!slug) return;
+
 		loading = true;
 		error = null;
 
@@ -87,7 +90,10 @@
 		<div class="topic-content">
 			<!-- Header -->
 			<header class="topic-header">
-				<h1 class="topic-name">{topic.name}</h1>
+				<div class="topic-header-top">
+					<h1 class="topic-name">{topic.name}</h1>
+					<FollowButton slug={topic.slug} name={topic.name} />
+				</div>
 				{#if topic.summary}
 					<p class="topic-summary">{topic.summary}</p>
 				{/if}
@@ -218,10 +224,19 @@
 		margin-bottom: var(--spacing-lg);
 	}
 
+	.topic-header-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--spacing-md);
+		flex-wrap: wrap;
+		margin-bottom: var(--spacing-sm);
+	}
+
 	.topic-name {
 		font-size: var(--font-size-3xl);
 		font-weight: var(--font-weight-bold);
-		margin: 0 0 var(--spacing-sm) 0;
+		margin: 0;
 		text-transform: capitalize;
 	}
 

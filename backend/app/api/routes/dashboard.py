@@ -1,6 +1,7 @@
 """Dashboard API routes for trending topics and sentiment data."""
 
 import logging
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +13,40 @@ from app.dashboard.service import AggregationService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard")
+
+
+@router.get("/patch-pulse")
+async def get_patch_pulse(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=20)] = 10,
+) -> dict:
+    """Get Patch Pulse data for current patch.
+
+    Returns patch-specific sentiment data including topics, overall sentiment,
+    and total posts analyzed.
+
+    Args:
+        db: Database session.
+        limit: Maximum topics to return (1-20).
+
+    Returns:
+        Dict with patch info, topics, and overall sentiment.
+    """
+    from app.dashboard.patch_service import PatchService
+
+    patch_service = PatchService()
+    current_patch = await patch_service.get_current_patch()
+
+    service = AggregationService(db)
+    pulse_data = await service.get_patch_pulse(current_patch, limit=limit)
+
+    return {
+        "patch": current_patch,
+        "topics": pulse_data["topics"],
+        "overall_sentiment": pulse_data["overall_sentiment"],
+        "total_posts": pulse_data["total_posts"],
+        "last_updated": datetime.utcnow().isoformat(),
+    }
 
 
 @router.get("/trending")

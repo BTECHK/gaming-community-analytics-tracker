@@ -88,3 +88,19 @@ export interface FilterState {
 
 /** Theme preference */
 export type ThemeMode = 'dark' | 'light' | 'system';
+
+/** Overall sentiment across all topics */
+export interface OverallSentiment {
+	positive: number;
+	neutral: number;
+	negative: number;
+}
+
+/** Patch Pulse response */
+export interface PatchPulseResponse {
+	patch: string;
+	topics: Topic[];
+	overall_sentiment: OverallSentiment;
+	total_posts: number;
+	last_updated: string;
+}

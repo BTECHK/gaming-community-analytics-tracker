@@ -7,7 +7,8 @@ import type {
 	TopicsListResponse,
 	Topic,
 	SourcesResponse,
-	AggregateResponse
+	AggregateResponse,
+	PatchPulseResponse
 } from './types';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -100,6 +101,16 @@ export const api = {
 			min_posts: options?.minPosts
 		});
 		return fetchApi<AggregateResponse>(endpoint, { method: 'POST' });
+	},
+
+	/**
+	 * Get Patch Pulse data for current patch
+	 */
+	async getPatchPulse(options?: { limit?: number }): Promise<PatchPulseResponse> {
+		const endpoint = buildUrl('/dashboard/patch-pulse', {
+			limit: options?.limit
+		});
+		return fetchApi<PatchPulseResponse>(endpoint);
 	}
 };
 
