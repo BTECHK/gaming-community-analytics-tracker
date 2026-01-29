@@ -17,11 +17,12 @@ def utcnow() -> datetime:
 
 
 class FeedbackType(str, Enum):
-    """Type of feedback: vote or report."""
+    """Type of feedback: vote, report, or general."""
 
     THUMBS_UP = "thumbs_up"
     THUMBS_DOWN = "thumbs_down"
     REPORT = "report"
+    GENERAL = "general"
 
 
 class Feedback(Base):

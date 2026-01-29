@@ -110,6 +110,13 @@ export interface ReportRequest {
 	session_id: string;
 }
 
+/** General feedback request */
+export interface GeneralFeedbackRequest {
+	message: string;
+	email?: string;
+	session_id: string;
+}
+
 /** Feedback response */
 export interface FeedbackResponse {
 	success: boolean;

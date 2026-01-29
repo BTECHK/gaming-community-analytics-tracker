@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,12 @@ from app.models import Post, SentimentResult, SentimentLabel
 from app.nlp.sentiment import SentimentAnalyzer, SentimentScore
 from app.nlp.topics import TopicDetector, TopicResult
 from app.nlp.toxicity import ToxicityDetector, ToxicityResult
+from app.nlp.circuit_breaker import (
+    CircuitBreaker,
+    CircuitOpenError,
+    get_model_breaker,
+    with_retry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +52,54 @@ class NLPService:
         self._toxicity_detector = toxicity_detector
 
     def _get_analyzer(self) -> SentimentAnalyzer:
-        """Get or create sentiment analyzer."""
+        """Get or create sentiment analyzer with circuit breaker protection."""
         if self._analyzer is None:
-            self._analyzer = SentimentAnalyzer(batch_size=self.settings.nlp_batch_size)
+            breaker = get_model_breaker("sentiment")
+            try:
+                self._analyzer = breaker.call(
+                    SentimentAnalyzer,
+                    batch_size=self.settings.nlp_batch_size,
+                )
+            except CircuitOpenError:
+                logger.warning("Sentiment model circuit breaker is open")
+                raise
+            except Exception as e:
+                logger.error("Failed to load sentiment model: %s", e)
+                raise
         return self._analyzer
 
     def _get_topic_detector(self) -> TopicDetector:
-        """Get or create topic detector."""
+        """Get or create topic detector with circuit breaker protection."""
         if self._topic_detector is None:
-            self._topic_detector = TopicDetector(batch_size=self.settings.nlp_batch_size)
+            breaker = get_model_breaker("topics")
+            try:
+                self._topic_detector = breaker.call(
+                    TopicDetector,
+                    batch_size=self.settings.nlp_batch_size,
+                )
+            except CircuitOpenError:
+                logger.warning("Topic model circuit breaker is open")
+                raise
+            except Exception as e:
+                logger.error("Failed to load topic model: %s", e)
+                raise
         return self._topic_detector
 
     def _get_toxicity_detector(self) -> ToxicityDetector:
-        """Get or create toxicity detector."""
+        """Get or create toxicity detector with circuit breaker protection."""
         if self._toxicity_detector is None:
-            self._toxicity_detector = ToxicityDetector(batch_size=self.settings.nlp_batch_size)
+            breaker = get_model_breaker("toxicity")
+            try:
+                self._toxicity_detector = breaker.call(
+                    ToxicityDetector,
+                    batch_size=self.settings.nlp_batch_size,
+                )
+            except CircuitOpenError:
+                logger.warning("Toxicity model circuit breaker is open")
+                raise
+            except Exception as e:
+                logger.error("Failed to load toxicity model: %s", e)
+                raise
         return self._toxicity_detector
 
     async def get_unprocessed_posts(self, limit: int | None = None) -> list[Post]:
@@ -120,11 +160,42 @@ class NLPService:
             return post.title.strip()
         return ""
 
+    def _analyze_batch_with_retry(
+        self,
+        analyzer: SentimentAnalyzer,
+        topic_detector: TopicDetector,
+        toxicity_detector: ToxicityDetector,
+        texts: list[str],
+    ) -> tuple[list[SentimentScore], list[TopicResult], list[ToxicityResult]]:
+        """Run batch analysis with retry logic.
+
+        Args:
+            analyzer: Sentiment analyzer.
+            topic_detector: Topic detector.
+            toxicity_detector: Toxicity detector.
+            texts: Texts to analyze.
+
+        Returns:
+            Tuple of (sentiment scores, topic results, toxicity results).
+        """
+        sentiment_breaker = get_model_breaker("sentiment")
+        topic_breaker = get_model_breaker("topics")
+        toxicity_breaker = get_model_breaker("toxicity")
+
+        # Run each analysis with circuit breaker protection
+        scores = sentiment_breaker.call(analyzer.analyze_batch, texts)
+        topic_results = topic_breaker.call(topic_detector.detect_batch, texts)
+        toxicity_results = toxicity_breaker.call(toxicity_detector.detect_batch, texts)
+
+        return scores, topic_results, toxicity_results
+
     async def analyze_posts(self, posts: list[Post]) -> list[SentimentResult]:
         """Run sentiment, topic, and toxicity analysis on posts and store results.
 
         Toxic posts (interpersonal attacks, threats, harassment) are deleted
         from the database rather than stored.
+
+        Uses circuit breakers and retry logic for resilience.
 
         Args:
             posts: Posts to analyze.
@@ -135,18 +206,30 @@ class NLPService:
         if not posts:
             return []
 
-        analyzer = self._get_analyzer()
-        topic_detector = self._get_topic_detector()
-        toxicity_detector = self._get_toxicity_detector()
+        try:
+            analyzer = self._get_analyzer()
+            topic_detector = self._get_topic_detector()
+            toxicity_detector = self._get_toxicity_detector()
+        except CircuitOpenError as e:
+            logger.error("Cannot analyze posts - circuit breaker open: %s", e)
+            return []
+
         ttl_hours = self.settings.nlp_result_ttl_hours
 
         # Extract text from posts
         texts = [self._get_text_for_analysis(p) for p in posts]
 
-        # Run batch analysis
-        scores = analyzer.analyze_batch(texts)
-        topic_results = topic_detector.detect_batch(texts)
-        toxicity_results = toxicity_detector.detect_batch(texts)
+        # Run batch analysis with circuit breaker protection
+        try:
+            scores, topic_results, toxicity_results = self._analyze_batch_with_retry(
+                analyzer, topic_detector, toxicity_detector, texts
+            )
+        except CircuitOpenError as e:
+            logger.error("Analysis failed - circuit breaker open: %s", e)
+            return []
+        except Exception as e:
+            logger.error("Analysis failed: %s", e)
+            return []
 
         # Create result objects
         now = datetime.now(timezone.utc)
@@ -193,10 +276,11 @@ class NLPService:
 
         return results
 
-    async def process_batch(self) -> dict:
+    async def process_batch(self) -> dict[str, Any]:
         """Main entry point for batch sentiment processing.
 
         Fetches unprocessed posts and analyzes them.
+        Handles circuit breaker failures gracefully.
 
         Returns:
             Dict with processing statistics.
@@ -209,8 +293,28 @@ class NLPService:
 
         logger.info("Processing %d posts for sentiment analysis", len(posts))
         initial_count = len(posts)
-        results = await self.analyze_posts(posts)
+
+        try:
+            results = await self.analyze_posts(posts)
+        except CircuitOpenError as e:
+            logger.error("Processing failed - circuit breaker open: %s", e)
+            return {
+                "processed": 0,
+                "filtered_toxic": 0,
+                "status": "failed",
+                "error": "Service temporarily unavailable - circuit breaker open",
+            }
+
         filtered_count = initial_count - len(results)
+
+        # Check if we got no results due to failures
+        if len(results) == 0 and initial_count > 0:
+            return {
+                "processed": 0,
+                "filtered_toxic": filtered_count,
+                "status": "partial",
+                "warning": "Analysis returned no results - possible model failure",
+            }
 
         return {
             "processed": len(results),

@@ -10,6 +10,7 @@ from app.api.deps import get_db
 from app.models.feedback import Feedback, FeedbackType
 from app.schemas.feedback import (
     FeedbackResponse,
+    GeneralFeedbackRequest,
     ReportRequest,
     VoteRequest,
 )
@@ -84,4 +85,37 @@ async def submit_report(
     return FeedbackResponse(
         success=True,
         message="Report submitted successfully. Thank you for your feedback.",
+    )
+
+
+@router.post("/general", response_model=FeedbackResponse)
+async def submit_general_feedback(
+    request: GeneralFeedbackRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> FeedbackResponse:
+    """Submit general feedback about the application.
+
+    Args:
+        request: General feedback with message, optional email, and session ID.
+        db: Database session.
+
+    Returns:
+        Success response.
+    """
+    feedback = Feedback(
+        topic_slug="__general__",  # Special slug for general feedback
+        feedback_type=FeedbackType.GENERAL.value,
+        details=request.message,
+        reason=request.email,  # Reuse reason field for email (optional)
+        session_id=request.session_id,
+    )
+
+    db.add(feedback)
+    await db.commit()
+
+    logger.info(f"General feedback submitted from session {request.session_id[:8]}...")
+
+    return FeedbackResponse(
+        success=True,
+        message="Thank you for your feedback!",
     )

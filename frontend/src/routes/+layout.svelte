@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import FloatingFeedbackButton from '$lib/components/FloatingFeedbackButton.svelte';
 	import api from '$lib/api';
 	import type { TopicNavItem } from '$lib/types';
 
@@ -37,6 +38,8 @@
 
 <div class="app-layout">
 	<Sidebar {topics} />
+
+	<FloatingFeedbackButton />
 
 	<div class="main-area">
 		<header class="header">

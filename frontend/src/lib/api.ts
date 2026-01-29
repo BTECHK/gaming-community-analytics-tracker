@@ -11,6 +11,7 @@ import type {
 	PatchPulseResponse,
 	VoteRequest,
 	ReportRequest,
+	GeneralFeedbackRequest,
 	FeedbackResponse
 } from './types';
 
@@ -131,6 +132,16 @@ export const api = {
 	 */
 	async submitReport(request: ReportRequest): Promise<FeedbackResponse> {
 		return fetchApi<FeedbackResponse>('/feedback/report', {
+			method: 'POST',
+			body: JSON.stringify(request)
+		});
+	},
+
+	/**
+	 * Submit general feedback about the application
+	 */
+	async submitGeneralFeedback(request: GeneralFeedbackRequest): Promise<FeedbackResponse> {
+		return fetchApi<FeedbackResponse>('/feedback/general', {
 			method: 'POST',
 			body: JSON.stringify(request)
 		});

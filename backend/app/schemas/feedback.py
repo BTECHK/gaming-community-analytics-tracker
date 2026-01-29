@@ -38,6 +38,14 @@ class ReportRequest(BaseModel):
     session_id: str = Field(..., min_length=1, max_length=255)
 
 
+class GeneralFeedbackRequest(BaseModel):
+    """Request body for general feedback submission."""
+
+    message: str = Field(..., min_length=1, max_length=2000)
+    email: str | None = Field(None, max_length=255)
+    session_id: str = Field(..., min_length=1, max_length=255)
+
+
 class FeedbackResponse(BaseModel):
     """Response for feedback submission."""
 

@@ -1,0 +1,38 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies for asyncpg, hdbscan (C extensions), and ML libs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libpq-dev \
+    libc-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy all files (need package structure for hatchling)
+COPY . .
+
+# Install package in development mode
+RUN pip install --no-cache-dir -e .
+
+# Preload NLP models during build to speed up container startup
+# This downloads models to the container's cache
+RUN python -c "\
+from app.nlp.sentiment import SentimentAnalyzer; \
+from app.nlp.topics import TopicDetector; \
+from app.nlp.toxicity import ToxicityDetector; \
+print('Loading sentiment model...'); SentimentAnalyzer(batch_size=1); \
+print('Loading topic model...'); TopicDetector(batch_size=1); \
+print('Loading toxicity model...'); ToxicityDetector(batch_size=1); \
+print('All models preloaded successfully')"
+
+# Expose worker port
+EXPOSE 8001
+
+# Health check for model readiness
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/ready')" || exit 1
+
+# Run the NLP worker
+CMD ["python", "-m", "app.nlp.worker"]

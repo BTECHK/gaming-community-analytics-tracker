@@ -33,6 +33,8 @@ dependencies = [
     "scikit-learn>=1.5.0",
     # Toxicity Detection
     "detoxify>=0.5.2",
+    # System monitoring
+    "psutil>=6.0.0",
 ]
 
 [project.optional-dependencies]
