@@ -16,7 +16,6 @@
 			official-news: 'R',
 			tier-site: 'O',
 			guide-site: 'M',
-			reddit: 'r',
 			google_trends: 'G'
 		};
 		return icons[platform] || '?';
@@ -143,10 +142,6 @@
 
 	.mention-icon[data-platform='guide-site'] {
 		background: var(--color-guide-site);
-	}
-
-	.mention-icon[data-platform='reddit'] {
-		background: var(--color-reddit);
 	}
 
 	.mention-icon[data-platform='google_trends'] {

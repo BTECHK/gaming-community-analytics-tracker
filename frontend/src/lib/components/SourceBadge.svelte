@@ -13,7 +13,6 @@
 		official-news: 'OfficialNews',
 		tier-site: 'TierSite',
 		guide-site: 'GuideSite',
-		reddit: 'Reddit',
 		google_trends: 'Google Trends'
 	};
 </script>
@@ -64,11 +63,6 @@
 	.source-badge[data-platform='guide-site'] {
 		background: rgba(255, 107, 53, 0.15);
 		color: var(--color-guide-site);
-	}
-
-	.source-badge[data-platform='reddit'] {
-		background: rgba(255, 69, 0, 0.15);
-		color: var(--color-reddit);
 	}
 
 	.source-badge[data-platform='google_trends'] {

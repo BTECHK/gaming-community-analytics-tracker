@@ -11,7 +11,6 @@
 		official-news: 'var(--color-official-news)',
 		tier-site: 'var(--color-tier-site)',
 		guide-site: 'var(--color-guide-site)',
-		reddit: 'var(--color-reddit)',
 		google_trends: 'var(--color-google-trends)'
 	};
 
@@ -20,7 +19,6 @@
 		official-news: 'OfficialNews',
 		tier-site: 'TierSite',
 		guide-site: 'GuideSite',
-		reddit: 'Reddit',
 		google_trends: 'Google Trends'
 	};
 

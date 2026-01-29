@@ -15,7 +15,6 @@ from app.database import Base
 class Platform(str, enum.Enum):
     """Supported content platforms."""
 
-    REDDIT = "reddit"
     YOUTUBE = "youtube"
     RIOT = "official-news"
     TierSite = "tier-site"
