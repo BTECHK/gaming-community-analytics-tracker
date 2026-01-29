@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     nlp_chunk_size: int = 1000
     nlp_result_ttl_hours: int = 48
     nlp_enabled: bool = True
+    nlp_use_worker: bool = True  # Use isolated worker process for NLP
+    nlp_worker_url: str = "http://nlp-worker:8001"  # Worker service URL
 
     @property
     def google_trends_keywords_list(self) -> list[str]:

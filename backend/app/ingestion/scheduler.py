@@ -194,6 +194,7 @@ async def sentiment_analysis_job() -> None:
     """Scheduled job to run sentiment analysis on unprocessed posts.
 
     Runs every 6 hours with 30min offset to ensure ingestion completes first.
+    Uses the isolated NLP worker when available to keep API memory usage low.
     """
     settings = get_settings()
 
@@ -209,11 +210,22 @@ async def sentiment_analysis_job() -> None:
     async with session_factory() as session:
         try:
             service = NLPService(session)
-            result = await service.process_batch()
+
+            # Check worker availability for logging
+            worker_available = await service.check_worker_available()
+            if settings.nlp_use_worker:
+                if worker_available:
+                    logger.info("NLP worker available, using worker for processing")
+                else:
+                    logger.warning("NLP worker not available, using local fallback")
+
+            # Use worker-aware method
+            result = await service.process_batch_via_worker()
 
             logger.info(
-                "Sentiment analysis complete: processed=%d",
+                "Sentiment analysis complete: processed=%d, worker_used=%s",
                 result.get("processed", 0),
+                result.get("worker_used", False),
             )
         except Exception as e:
             logger.error("Sentiment analysis job failed: %s", e)

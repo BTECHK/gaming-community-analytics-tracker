@@ -35,6 +35,8 @@ dependencies = [
     "detoxify>=0.5.2",
     # System monitoring
     "psutil>=6.0.0",
+    # Valkey/Redis for job persistence and dead letter queue
+    "redis>=5.0.0",
 ]
 
 [project.optional-dependencies]

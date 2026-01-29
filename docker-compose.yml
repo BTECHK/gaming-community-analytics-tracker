@@ -44,6 +44,7 @@ services:
       YOUTUBE_CHANNEL_IDS: ${YOUTUBE_CHANNEL_IDS:-}
       YOUTUBE_SEARCH_QUERIES: ${YOUTUBE_SEARCH_QUERIES:-}
       NLP_WORKER_URL: http://nlp-worker:8001
+      NLP_USE_WORKER: ${NLP_USE_WORKER:-true}
     ports:
       - "8000:8000"
     volumes:
@@ -53,6 +54,9 @@ services:
         condition: service_healthy
         restart: true
       cache:
+        condition: service_healthy
+        restart: true
+      nlp-worker:
         condition: service_healthy
         restart: true
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -75,8 +79,8 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/ready')"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 120s
+      retries: 5
+      start_period: 180s
 
   web:
     build:

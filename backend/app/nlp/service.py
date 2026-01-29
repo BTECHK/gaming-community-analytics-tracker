@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import httpx
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -19,6 +20,7 @@ from app.nlp.circuit_breaker import (
     get_model_breaker,
     with_retry,
 )
+from app.nlp.dead_letter import DeadLetterQueue
 
 logger = logging.getLogger(__name__)
 
@@ -357,4 +359,281 @@ class NLPService:
                 "ttl_hours": self.settings.nlp_result_ttl_hours,
                 "enabled": self.settings.nlp_enabled,
             },
+        }
+
+    async def add_to_dlq(
+        self,
+        posts: list[Post],
+        error: str,
+    ) -> int:
+        """Add failed posts to the dead letter queue.
+
+        Args:
+            posts: Posts that failed processing.
+            error: Error message describing the failure.
+
+        Returns:
+            Number of posts added to DLQ.
+        """
+        if not posts:
+            return 0
+
+        try:
+            dlq = await DeadLetterQueue.get_instance()
+            count = 0
+
+            for post in posts:
+                content = self._get_text_for_analysis(post)
+                await dlq.add_failed_post(
+                    post_id=str(post.id),
+                    error=error,
+                    post_content=content,
+                )
+                count += 1
+
+            logger.info("Added %d posts to DLQ: %s", count, error)
+            return count
+        except Exception as e:
+            logger.warning("Failed to add posts to DLQ: %s", e)
+            return 0
+
+    async def remove_from_dlq(self, post_id: str) -> bool:
+        """Remove a post from the dead letter queue after successful processing.
+
+        Args:
+            post_id: Post identifier.
+
+        Returns:
+            True if removed, False otherwise.
+        """
+        try:
+            dlq = await DeadLetterQueue.get_instance()
+            return await dlq.remove_post(post_id)
+        except Exception as e:
+            logger.warning("Failed to remove post from DLQ: %s", e)
+            return False
+
+    async def should_process_post(self, post_id: str) -> bool:
+        """Check if a post should be processed (not exhausted in DLQ).
+
+        Args:
+            post_id: Post identifier.
+
+        Returns:
+            True if post should be processed.
+        """
+        try:
+            dlq = await DeadLetterQueue.get_instance()
+            return await dlq.should_retry(post_id)
+        except Exception as e:
+            logger.warning("Failed to check DLQ status: %s", e)
+            return True  # Fail open
+
+    async def check_worker_available(self) -> bool:
+        """Check if the NLP worker is available and ready.
+
+        Returns:
+            True if worker is available, False otherwise.
+        """
+        if not self.settings.nlp_use_worker:
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{self.settings.nlp_worker_url}/ready")
+                return response.status_code == 200
+        except Exception as e:
+            logger.debug("Worker not available: %s", e)
+            return False
+
+    async def _call_worker(
+        self,
+        texts: list[str],
+    ) -> dict[str, Any] | None:
+        """Call the NLP worker for batch analysis.
+
+        Args:
+            texts: Texts to analyze.
+
+        Returns:
+            Worker response with sentiment, topics, toxicity or None on error.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{self.settings.nlp_worker_url}/analyze",
+                    json={"texts": texts},
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error("Worker returned error: %s", e.response.status_code)
+            return None
+        except Exception as e:
+            logger.error("Worker call failed: %s", e)
+            return None
+
+    async def analyze_posts_via_worker(
+        self,
+        posts: list[Post],
+    ) -> list[SentimentResult]:
+        """Analyze posts using the isolated NLP worker.
+
+        Falls back to local processing if worker unavailable.
+        Adds failed posts to DLQ.
+
+        Args:
+            posts: Posts to analyze.
+
+        Returns:
+            List of created SentimentResult objects.
+        """
+        if not posts:
+            return []
+
+        # Check worker availability
+        worker_available = await self.check_worker_available()
+
+        if not worker_available:
+            logger.warning("Worker unavailable, falling back to local processing")
+            return await self.analyze_posts(posts)
+
+        # Extract texts
+        texts = [self._get_text_for_analysis(p) for p in posts]
+
+        # Call worker
+        logger.info("Sending %d posts to NLP worker", len(posts))
+        worker_response = await self._call_worker(texts)
+
+        if worker_response is None:
+            # Worker failed - add to DLQ and fallback
+            await self.add_to_dlq(posts, "Worker call failed")
+            logger.warning("Worker failed, falling back to local processing")
+            return await self.analyze_posts(posts)
+
+        # Process worker response
+        ttl_hours = self.settings.nlp_result_ttl_hours
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(hours=ttl_hours)
+
+        results: list[SentimentResult] = []
+        toxic_posts: list[Post] = []
+
+        sentiment_results = worker_response.get("sentiment", [])
+        topic_results = worker_response.get("topics", [])
+        toxicity_results = worker_response.get("toxicity", [])
+
+        for i, post in enumerate(posts):
+            if i >= len(sentiment_results):
+                # Partial response - add remaining to DLQ
+                await self.add_to_dlq([post], "Partial worker response")
+                continue
+
+            sentiment = sentiment_results[i]
+            topics = topic_results[i] if i < len(topic_results) else {}
+            toxicity = toxicity_results[i] if i < len(toxicity_results) else {}
+
+            # Filter out toxic posts
+            if toxicity.get("is_toxic", False):
+                toxic_posts.append(post)
+                continue
+
+            # Create result
+            try:
+                label = SentimentLabel(sentiment["label"])
+                result = SentimentResult(
+                    post_id=post.id,
+                    label=label,
+                    confidence=sentiment["confidence"],
+                    scores=sentiment.get("scores", {}),
+                    topics=topics,
+                    is_toxic=False,
+                    toxicity_score=toxicity.get("toxicity_score", 0.0),
+                    model_name="worker",
+                    analyzed_at=now,
+                    expires_at=expires_at,
+                )
+                self.session.add(result)
+                results.append(result)
+
+                # Remove from DLQ on success
+                await self.remove_from_dlq(str(post.id))
+
+            except Exception as e:
+                logger.error("Failed to create result for post %s: %s", post.id, e)
+                await self.add_to_dlq([post], str(e))
+
+        # Delete toxic posts
+        for post in toxic_posts:
+            await self.session.delete(post)
+
+        await self.session.commit()
+
+        if toxic_posts:
+            logger.info("Filtered out %d toxic posts via worker", len(toxic_posts))
+        logger.info("Stored %d sentiment results via worker", len(results))
+
+        return results
+
+    async def process_batch_via_worker(self) -> dict[str, Any]:
+        """Process batch using the NLP worker.
+
+        Fetches unprocessed posts and analyzes them via worker.
+        Falls back to local processing if worker unavailable.
+
+        Returns:
+            Dict with processing statistics.
+        """
+        # Check worker first
+        worker_available = await self.check_worker_available()
+        if not worker_available and self.settings.nlp_use_worker:
+            logger.warning("NLP worker not available, will use local fallback")
+
+        posts = await self.get_unprocessed_posts()
+
+        if not posts:
+            logger.info("No posts need sentiment analysis")
+            return {
+                "processed": 0,
+                "filtered_toxic": 0,
+                "status": "complete",
+                "worker_used": False,
+            }
+
+        logger.info("Processing %d posts for sentiment analysis", len(posts))
+        initial_count = len(posts)
+
+        try:
+            if worker_available:
+                results = await self.analyze_posts_via_worker(posts)
+            else:
+                results = await self.analyze_posts(posts)
+        except CircuitOpenError as e:
+            logger.error("Processing failed - circuit breaker open: %s", e)
+            await self.add_to_dlq(posts, f"Circuit breaker open: {e}")
+            return {
+                "processed": 0,
+                "filtered_toxic": 0,
+                "status": "failed",
+                "error": "Service temporarily unavailable - circuit breaker open",
+                "worker_used": worker_available,
+            }
+        except Exception as e:
+            logger.error("Processing failed: %s", e)
+            await self.add_to_dlq(posts, str(e))
+            return {
+                "processed": 0,
+                "filtered_toxic": 0,
+                "status": "failed",
+                "error": str(e),
+                "worker_used": worker_available,
+            }
+
+        filtered_count = initial_count - len(results)
+
+        return {
+            "processed": len(results),
+            "filtered_toxic": filtered_count,
+            "status": "complete",
+            "worker_used": worker_available,
         }

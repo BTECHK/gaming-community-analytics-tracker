@@ -5,8 +5,12 @@ import os
 import psutil
 from typing import Any
 
+import httpx
+
+from app.config import get_settings
 from app.nlp.circuit_breaker import get_all_breaker_statuses
 from app.nlp.jobs import get_job_manager
+from app.nlp.dead_letter import DeadLetterQueue
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +86,65 @@ def check_model_status() -> dict[str, Any]:
     return models_status
 
 
-def get_nlp_health() -> dict[str, Any]:
+async def get_dlq_stats() -> dict[str, Any] | None:
+    """Get dead letter queue statistics.
+
+    Returns:
+        DLQ stats or None if unavailable.
+    """
+    try:
+        dlq = await DeadLetterQueue.get_instance()
+        return await dlq.get_stats()
+    except Exception as e:
+        logger.warning("Failed to get DLQ stats: %s", e)
+        return None
+
+
+async def check_worker_status() -> dict[str, Any]:
+    """Check NLP worker availability and status.
+
+    Returns:
+        Dict with worker status information.
+    """
+    settings = get_settings()
+
+    if not settings.nlp_use_worker:
+        return {
+            "enabled": False,
+            "available": False,
+            "url": settings.nlp_worker_url,
+            "error": "Worker disabled in settings",
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{settings.nlp_worker_url}/ready")
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "enabled": True,
+                    "available": True,
+                    "url": settings.nlp_worker_url,
+                    "memory": data.get("memory"),
+                    "models_loaded": data.get("models_loaded", False),
+                }
+            else:
+                return {
+                    "enabled": True,
+                    "available": False,
+                    "url": settings.nlp_worker_url,
+                    "error": f"Worker returned status {response.status_code}",
+                }
+    except Exception as e:
+        return {
+            "enabled": True,
+            "available": False,
+            "url": settings.nlp_worker_url,
+            "error": str(e),
+        }
+
+
+async def get_nlp_health() -> dict[str, Any]:
     """Get comprehensive NLP system health.
 
     Returns:
@@ -101,10 +163,18 @@ def get_nlp_health() -> dict[str, Any]:
 
     # Get job status
     job_manager = get_job_manager()
-    job_status = job_manager.get_status()
+    job_status = await job_manager.get_status()
+
+    # Get DLQ stats
+    dlq_stats = await get_dlq_stats()
+    dlq_healthy = dlq_stats is None or dlq_stats.get("exhausted", 0) == 0
+
+    # Get worker status
+    worker_status = await check_worker_status()
+    worker_available = worker_status.get("available", False)
 
     # Overall status
-    overall_healthy = memory_healthy and circuits_healthy
+    overall_healthy = memory_healthy and circuits_healthy and dlq_healthy
 
     return {
         "status": "healthy" if overall_healthy else "degraded",
@@ -113,10 +183,14 @@ def get_nlp_health() -> dict[str, Any]:
         "circuit_breakers": circuit_breakers,
         "circuits_healthy": circuits_healthy,
         "job": job_status,
+        "dlq": dlq_stats,
+        "dlq_healthy": dlq_healthy,
+        "worker": worker_status,
+        "worker_available": worker_available,
     }
 
 
-def get_nlp_health_detailed() -> dict[str, Any]:
+async def get_nlp_health_detailed() -> dict[str, Any]:
     """Get detailed NLP health including model checks.
 
     This is more expensive as it tests model loading.
@@ -124,7 +198,7 @@ def get_nlp_health_detailed() -> dict[str, Any]:
     Returns:
         Dict with detailed health information.
     """
-    health = get_nlp_health()
+    health = await get_nlp_health()
 
     # Add model status (expensive check)
     models = check_model_status()
@@ -133,10 +207,15 @@ def get_nlp_health_detailed() -> dict[str, Any]:
     health["models"] = models
     health["models_healthy"] = models_healthy
 
-    # Update overall status
+    # Update overall status including DLQ
     health["status"] = (
         "healthy"
-        if health["memory_healthy"] and health["circuits_healthy"] and models_healthy
+        if (
+            health["memory_healthy"]
+            and health["circuits_healthy"]
+            and health["dlq_healthy"]
+            and models_healthy
+        )
         else "degraded"
     )
 
