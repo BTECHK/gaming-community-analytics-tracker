@@ -3,8 +3,10 @@
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+from uuid import UUID
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy import select
 
 from app.config import get_settings
 from app.database import get_engine, get_session_factory
@@ -18,7 +20,9 @@ from app.ingestion.adapters import (
 )
 from app.ingestion.service import IngestionService
 from app.nlp import NLPService
+from app.nlp.dead_letter import DeadLetterQueue
 from app.dashboard import AggregationService
+from app.models import Post
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +262,81 @@ async def aggregation_job() -> None:
             await session.close()
 
 
+async def dlq_retry_job() -> None:
+    """Scheduled job to retry failed posts from the dead letter queue.
+
+    Fetches retryable posts from DLQ and attempts to reprocess them.
+    Runs every hour (configurable via nlp_dlq_retry_interval_hours).
+    """
+    settings = get_settings()
+
+    if not settings.nlp_enabled:
+        logger.debug("NLP pipeline disabled, skipping DLQ retry")
+        return
+
+    logger.info("Starting DLQ retry job")
+
+    try:
+        dlq = await DeadLetterQueue.get_instance()
+        stats = await dlq.get_stats()
+
+        if stats["retryable"] == 0:
+            logger.info("No retryable posts in DLQ")
+            return
+
+        logger.info("DLQ has %d retryable posts", stats["retryable"])
+
+        # Get retryable posts
+        failed_posts = await dlq.get_failed_posts(limit=settings.nlp_dlq_retry_batch_size)
+        retryable_entries = [p for p in failed_posts if p.get("can_retry", False)]
+
+        if not retryable_entries:
+            logger.info("No posts eligible for retry")
+            return
+
+        # Get actual Post objects from database
+        engine = get_engine()
+        session_factory = get_session_factory(engine)
+
+        async with session_factory() as session:
+            try:
+                post_ids = [entry["post_id"] for entry in retryable_entries]
+
+                # Query posts by ID (UUIDs stored as strings in DLQ)
+                stmt = select(Post).where(
+                    Post.id.in_([UUID(pid) for pid in post_ids])
+                )
+                result = await session.execute(stmt)
+                posts = list(result.scalars().all())
+
+                if not posts:
+                    logger.warning("DLQ posts not found in database, cleaning up DLQ entries")
+                    for entry in retryable_entries:
+                        await dlq.remove_post(entry["post_id"])
+                    return
+
+                logger.info("Retrying %d posts from DLQ", len(posts))
+
+                # Process via NLP service
+                service = NLPService(session)
+                results = await service.analyze_posts_via_worker(posts)
+
+                # Posts that succeeded are automatically removed from DLQ in analyze_posts_via_worker
+                logger.info(
+                    "DLQ retry complete: attempted=%d, succeeded=%d",
+                    len(posts),
+                    len(results),
+                )
+
+            except Exception as e:
+                logger.error("DLQ retry processing failed: %s", e)
+            finally:
+                await session.close()
+
+    except Exception as e:
+        logger.error("DLQ retry job failed: %s", e)
+
+
 def configure_scheduler() -> None:
     """Configure scheduler with ingestion jobs."""
     settings = get_settings()
@@ -347,6 +426,20 @@ def configure_scheduler() -> None:
             replace_existing=True,
         )
         logger.info("Scheduled topic aggregation job (every 6 hours + 45min offset)")
+
+        # DLQ retry job (retries failed posts from dead letter queue)
+        scheduler.add_job(
+            dlq_retry_job,
+            "interval",
+            hours=settings.nlp_dlq_retry_interval_hours,
+            id="dlq_retry",
+            name="DLQ Retry",
+            replace_existing=True,
+        )
+        logger.info(
+            "Scheduled DLQ retry job (every %d hours)",
+            settings.nlp_dlq_retry_interval_hours,
+        )
     else:
         logger.info("NLP pipeline disabled, skipping sentiment analysis job")
 

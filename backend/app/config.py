@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     nlp_enabled: bool = True
     nlp_use_worker: bool = True  # Use isolated worker process for NLP
     nlp_worker_url: str = "http://nlp-worker:8001"  # Worker service URL
+    nlp_batch_timeout_seconds: int = 300  # 5 min timeout per batch
+    nlp_dlq_retry_interval_hours: int = 1  # Retry DLQ posts every hour
+    nlp_dlq_retry_batch_size: int = 10  # Max posts to retry per run
 
     @property
     def google_trends_keywords_list(self) -> list[str]:

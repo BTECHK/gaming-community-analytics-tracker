@@ -1,5 +1,6 @@
 """NLP service orchestration layer."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -221,16 +222,28 @@ class NLPService:
         # Extract text from posts
         texts = [self._get_text_for_analysis(p) for p in posts]
 
-        # Run batch analysis with circuit breaker protection
+        # Run batch analysis with circuit breaker protection and timeout
+        timeout_seconds = self.settings.nlp_batch_timeout_seconds
         try:
-            scores, topic_results, toxicity_results = self._analyze_batch_with_retry(
-                analyzer, topic_detector, toxicity_detector, texts
-            )
+            async with asyncio.timeout(timeout_seconds):
+                # Run synchronous batch analysis in executor to respect timeout
+                loop = asyncio.get_event_loop()
+                scores, topic_results, toxicity_results = await loop.run_in_executor(
+                    None,
+                    self._analyze_batch_with_retry,
+                    analyzer, topic_detector, toxicity_detector, texts,
+                )
+        except asyncio.TimeoutError:
+            logger.error("Batch analysis timed out after %d seconds", timeout_seconds)
+            await self.add_to_dlq(posts, f"Batch timeout after {timeout_seconds}s")
+            return []
         except CircuitOpenError as e:
             logger.error("Analysis failed - circuit breaker open: %s", e)
+            await self.add_to_dlq(posts, f"Circuit breaker open: {e}")
             return []
         except Exception as e:
             logger.error("Analysis failed: %s", e)
+            await self.add_to_dlq(posts, f"Analysis error: {e}")
             return []
 
         # Create result objects
