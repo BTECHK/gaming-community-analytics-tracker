@@ -17,6 +17,34 @@ import type {
 
 const API_BASE = 'http://localhost:8000/api';
 
+/** Simple in-memory cache for GET requests */
+interface CacheEntry<T> {
+	data: T;
+	timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+const DEFAULT_CACHE_TTL = 30 * 1000; // 30 seconds
+
+function getCached<T>(key: string, ttl: number = DEFAULT_CACHE_TTL): T | null {
+	const entry = cache.get(key);
+	if (!entry) return null;
+	if (Date.now() - entry.timestamp > ttl) {
+		cache.delete(key);
+		return null;
+	}
+	return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+	cache.set(key, { data, timestamp: Date.now() });
+}
+
+/** Clear all cached data */
+export function clearCache(): void {
+	cache.clear();
+}
+
 /** Generic fetch wrapper with error handling */
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 	const url = `${API_BASE}${endpoint}`;
@@ -69,28 +97,52 @@ export const api = {
 			theme: options?.themes,
 			limit: options?.limit
 		});
-		return fetchApi<TrendingResponse>(endpoint);
+		const cacheKey = `trending:${endpoint}`;
+		const cached = getCached<TrendingResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<TrendingResponse>(endpoint);
+		setCache(cacheKey, data);
+		return data;
 	},
 
 	/**
 	 * Get all topics for navigation sidebar
 	 */
 	async getTopics(): Promise<TopicsListResponse> {
-		return fetchApi<TopicsListResponse>('/dashboard/topics');
+		const cacheKey = 'topics:list';
+		const cached = getCached<TopicsListResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<TopicsListResponse>('/dashboard/topics');
+		setCache(cacheKey, data);
+		return data;
 	},
 
 	/**
 	 * Get a single topic by slug
 	 */
 	async getTopic(slug: string): Promise<Topic> {
-		return fetchApi<Topic>(`/dashboard/topics/${encodeURIComponent(slug)}`);
+		const cacheKey = `topic:${slug}`;
+		const cached = getCached<Topic>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<Topic>(`/dashboard/topics/${encodeURIComponent(slug)}`);
+		setCache(cacheKey, data);
+		return data;
 	},
 
 	/**
 	 * Get source distribution
 	 */
 	async getSources(): Promise<SourcesResponse> {
-		return fetchApi<SourcesResponse>('/dashboard/sources');
+		const cacheKey = 'sources';
+		const cached = getCached<SourcesResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<SourcesResponse>('/dashboard/sources');
+		setCache(cacheKey, data);
+		return data;
 	},
 
 	/**
@@ -114,7 +166,13 @@ export const api = {
 		const endpoint = buildUrl('/dashboard/patch-pulse', {
 			limit: options?.limit
 		});
-		return fetchApi<PatchPulseResponse>(endpoint);
+		const cacheKey = `patchpulse:${endpoint}`;
+		const cached = getCached<PatchPulseResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<PatchPulseResponse>(endpoint);
+		setCache(cacheKey, data);
+		return data;
 	},
 
 	/**

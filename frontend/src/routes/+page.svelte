@@ -10,6 +10,7 @@
 	import TopicCloud from '$lib/components/TopicCloud.svelte';
 	import SourcesCard from '$lib/components/SourcesCard.svelte';
 	import FollowButton from '$lib/components/FollowButton.svelte';
+	import LazyLoad from '$lib/components/LazyLoad.svelte';
 
 	// State
 	let topics: Topic[] = $state([]);
@@ -145,14 +146,20 @@
 				</section>
 
 				<section class="section">
-					<TopicCloud topics={allTopics} />
+					<LazyLoad minHeight="150px">
+						<TopicCloud topics={allTopics} />
+					</LazyLoad>
 				</section>
 			</div>
 
 			<!-- Sidebar content -->
 			<div class="side-column">
-				<MentionsFeed quotes={allQuotes} />
-				<SourcesCard {sources} percentages={sourcePercentages} />
+				<LazyLoad minHeight="300px">
+					<MentionsFeed quotes={allQuotes} />
+				</LazyLoad>
+				<LazyLoad minHeight="200px">
+					<SourcesCard {sources} percentages={sourcePercentages} />
+				</LazyLoad>
 			</div>
 		</div>
 	{/if}
