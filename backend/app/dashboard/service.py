@@ -324,15 +324,19 @@ class AggregationService:
         result = await self.session.execute(stmt)
         aggregations = list(result.scalars().all())
 
-        # Fallback: if no patch-specific aggregations, get all aggregations
+        # No fallback - if no patch-specific data, return empty with message
+        # This differentiates Patch Pulse from the general trending page
         if not aggregations:
-            stmt = (
-                select(Aggregation)
-                .order_by(Aggregation.post_count.desc())
-                .limit(limit)
-            )
-            result = await self.session.execute(stmt)
-            aggregations = list(result.scalars().all())
+            return {
+                "topics": [],
+                "overall_sentiment": {
+                    "positive": 0,
+                    "neutral": 0,
+                    "negative": 0,
+                },
+                "total_posts": 0,
+                "message": f"No community discussions found for patch {patch_version} yet. Check back soon!",
+            }
 
         topics = [self._aggregation_to_dict(agg) for agg in aggregations]
 

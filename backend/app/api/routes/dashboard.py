@@ -40,13 +40,19 @@ async def get_patch_pulse(
     service = AggregationService(db)
     pulse_data = await service.get_patch_pulse(current_patch, limit=limit)
 
-    return {
+    response = {
         "patch": current_patch,
         "topics": pulse_data["topics"],
         "overall_sentiment": pulse_data["overall_sentiment"],
         "total_posts": pulse_data["total_posts"],
         "last_updated": datetime.utcnow().isoformat(),
     }
+
+    # Include message if present (e.g., "no patch data yet")
+    if "message" in pulse_data:
+        response["message"] = pulse_data["message"]
+
+    return response
 
 
 @router.get("/trending")
