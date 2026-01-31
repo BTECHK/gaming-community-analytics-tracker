@@ -39,3 +39,6 @@ docker-compose.override.yml
 secrets/
 *.pem
 *.key
+
+# Strategic/competitive analysis - keep private
+.planning/decisions/ADR-002-competitive-analysis-feature-backlog-2026-01-30.md
