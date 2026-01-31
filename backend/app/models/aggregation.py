@@ -60,6 +60,8 @@ class Aggregation(Base):
 
     # Confidence/transparency
     confidence_score: Mapped[float | None] = mapped_column(Float)
+    sentiment_explanation: Mapped[dict | None] = mapped_column(JSONB)
+    confidence_breakdown: Mapped[dict | None] = mapped_column(JSONB)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

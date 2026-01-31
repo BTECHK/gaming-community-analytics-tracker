@@ -9,6 +9,10 @@ from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Post, SentimentResult, SentimentLabel, Aggregation, Platform
+from app.dashboard.explanation_generator import (
+    generate_sentiment_explanation,
+    generate_confidence_breakdown,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +147,25 @@ class AggregationService:
 
             slug = slugify(topic_name)
 
+            # Generate explanations
+            sentiment_explanation = generate_sentiment_explanation(
+                sentiment_positive=sentiment_positive,
+                sentiment_neutral=sentiment_neutral,
+                sentiment_negative=sentiment_negative,
+                source_mix=dict(data["sources"]),
+                quotes=representative_quotes,
+                post_count=post_count,
+            )
+
+            confidence_breakdown = generate_confidence_breakdown(
+                post_count=post_count,
+                source_mix=dict(data["sources"]),
+                quotes=representative_quotes,
+                sentiment_positive=sentiment_positive,
+                sentiment_neutral=sentiment_neutral,
+                sentiment_negative=sentiment_negative,
+            )
+
             # Check if aggregation exists
             existing = await self.session.execute(
                 select(Aggregation).where(Aggregation.topic_slug == slug)
@@ -162,6 +185,8 @@ class AggregationService:
                 aggregation.period_end = now
                 aggregation.confidence_score = confidence_score
                 aggregation.patch_version = current_patch
+                aggregation.sentiment_explanation = sentiment_explanation
+                aggregation.confidence_breakdown = confidence_breakdown
             else:
                 # Create new
                 aggregation = Aggregation(
@@ -177,6 +202,8 @@ class AggregationService:
                     period_end=now,
                     confidence_score=confidence_score,
                     patch_version=current_patch,
+                    sentiment_explanation=sentiment_explanation,
+                    confidence_breakdown=confidence_breakdown,
                 )
                 self.session.add(aggregation)
 
@@ -360,4 +387,6 @@ class AggregationService:
                 "end": agg.period_end.isoformat() if agg.period_end else None,
             },
             "summary": agg.summary,
+            "sentiment_explanation": agg.sentiment_explanation,
+            "confidence_breakdown": agg.confidence_breakdown,
         }

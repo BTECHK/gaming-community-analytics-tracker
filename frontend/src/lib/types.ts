@@ -26,6 +26,38 @@ export interface Period {
 	end: string | null;
 }
 
+/** Sentiment factor explaining why sentiment is positive/negative */
+export interface SentimentFactor {
+	type: string;
+	description: string;
+	impact: 'positive' | 'negative' | 'neutral';
+}
+
+/** Sentiment explanation data */
+export interface SentimentExplanation {
+	dominant_sentiment: SentimentLabel;
+	strength: 'strong' | 'moderate' | 'mixed';
+	primary_reason: string;
+	factors: SentimentFactor[];
+	sentiment_distribution_note: string;
+}
+
+/** Confidence contributing factor */
+export interface ConfidenceFactor {
+	name: string;
+	score: number;
+	weight: number;
+	explanation: string;
+}
+
+/** Confidence breakdown data */
+export interface ConfidenceBreakdown {
+	overall_score: number;
+	level: 'high' | 'medium' | 'low';
+	factors: ConfidenceFactor[];
+	limitations: string[] | null;
+}
+
 /** Topic aggregation data */
 export interface Topic {
 	slug: string;
@@ -37,6 +69,8 @@ export interface Topic {
 	confidence: number | null;
 	period: Period;
 	summary: string | null;
+	sentiment_explanation: SentimentExplanation | null;
+	confidence_breakdown: ConfidenceBreakdown | null;
 }
 
 /** Minimal topic info for navigation */

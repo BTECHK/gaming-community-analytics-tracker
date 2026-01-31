@@ -10,6 +10,8 @@
 	import FollowButton from '$lib/components/FollowButton.svelte';
 	import FeedbackButtons from '$lib/components/FeedbackButtons.svelte';
 	import ReportModal from '$lib/components/ReportModal.svelte';
+	import SentimentExplanation from '$lib/components/SentimentExplanation.svelte';
+	import ConfidenceBreakdown from '$lib/components/ConfidenceBreakdown.svelte';
 
 	let topic: Topic | null = $state(null);
 	let loading = $state(true);
@@ -134,6 +136,7 @@
 						</div>
 					</div>
 				</div>
+				<SentimentExplanation explanation={topic.sentiment_explanation} />
 			</section>
 
 			<!-- Stats section -->
@@ -159,14 +162,18 @@
 						<span class="stat-value">{Object.keys(topic.source_mix || {}).length}</span>
 						<span class="stat-label">Sources</span>
 					</div>
-					<div class="stat-card card">
-						<span class="stat-icon">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<circle cx="12" cy="12" r="10" />
-								<polyline points="12 6 12 12 16 14" />
-							</svg>
-						</span>
-						<ConfidenceIndicator confidence={topic.confidence} />
+					<div class="stat-card card confidence-card">
+						{#if topic.confidence_breakdown}
+							<ConfidenceBreakdown breakdown={topic.confidence_breakdown} compact={true} />
+						{:else}
+							<span class="stat-icon">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="12" cy="12" r="10" />
+									<polyline points="12 6 12 12 16 14" />
+								</svg>
+							</span>
+							<ConfidenceIndicator confidence={topic.confidence} />
+						{/if}
 					</div>
 				</div>
 			</section>
@@ -373,6 +380,12 @@
 	.stat-card .stat-label {
 		font-size: var(--font-size-sm);
 		color: var(--color-text-muted);
+	}
+
+	.stat-card.confidence-card {
+		padding: 0;
+		overflow: hidden;
+		align-items: stretch;
 	}
 
 	.main-grid {
