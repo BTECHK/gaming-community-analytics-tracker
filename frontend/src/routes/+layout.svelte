@@ -6,6 +6,10 @@
 	import FloatingFeedbackButton from '$lib/components/FloatingFeedbackButton.svelte';
 	import api from '$lib/api';
 	import type { TopicNavItem } from '$lib/types';
+	import { initI18n } from '$lib/i18n';
+
+	// Initialize i18n
+	initI18n();
 
 	interface Props {
 		children: import('svelte').Snippet;

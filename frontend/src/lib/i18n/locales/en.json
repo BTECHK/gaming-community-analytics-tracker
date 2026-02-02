@@ -1,0 +1,84 @@
+{
+  "app": {
+    "name": "CommunityPulse",
+    "tagline": "gaming Community Pulse"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "digest": "Your Digest",
+    "topics": "Topics",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Community Pulse",
+    "trending": "Trending Topics",
+    "patchPulse": "Patch Pulse",
+    "sources": "Data Sources",
+    "noTopics": "No trending topics yet",
+    "loading": "Loading dashboard..."
+  },
+  "digest": {
+    "title": "Your Daily Digest",
+    "subtitle": "{count} topic(s) followed",
+    "updatedToday": "{count} updated today",
+    "followPrompt": "Follow topics to see your personalized digest",
+    "noTopics": "No topics in your digest",
+    "noTopicsHelp": "Follow topics from the dashboard or trending list to see personalized summaries here.",
+    "browseTopics": "Browse Topics",
+    "loading": "Loading your digest...",
+    "aiSummary": "AI Summary",
+    "hideAiSummary": "Hide AI Summary",
+    "generatingSummary": "Generating your personalized summary...",
+    "aiGenerated": "AI Generated",
+    "autoSummary": "Auto Summary"
+  },
+  "topic": {
+    "posts": "{count} posts",
+    "viewDetails": "View details",
+    "sentiment": "Sentiment",
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "negative": "Negative",
+    "confidence": "Confidence",
+    "sources": "Sources",
+    "quotes": "Representative Quotes",
+    "follow": "Follow",
+    "unfollow": "Unfollow"
+  },
+  "feedback": {
+    "vote": {
+      "helpful": "Helpful",
+      "notHelpful": "Not helpful"
+    },
+    "report": {
+      "title": "Report Issue",
+      "misleading": "Misleading summary",
+      "inaccurateQuotes": "Inaccurate quotes",
+      "wrongSentiment": "Wrong sentiment",
+      "other": "Other",
+      "details": "Additional details (optional)",
+      "submit": "Submit Report",
+      "cancel": "Cancel",
+      "success": "Report submitted. Thank you for your feedback."
+    },
+    "general": {
+      "title": "Send Feedback",
+      "placeholder": "Share your thoughts about CommunityPulse...",
+      "email": "Email (optional)",
+      "submit": "Send Feedback",
+      "success": "Thank you for your feedback!"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "tryAgain": "Try Again",
+    "new": "New",
+    "updated": "Updated"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{days} days ago"
+  }
+}

@@ -23,6 +23,7 @@
   },
   "type": "module",
   "dependencies": {
+    "svelte-i18n": "^4.0.1",
     "svelte-persisted-state": "^1.2.0"
   }
 }
