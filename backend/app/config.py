@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     nlp_dlq_retry_interval_hours: int = 1  # Retry DLQ posts every hour
     nlp_dlq_retry_batch_size: int = 10  # Max posts to retry per run
 
+    # Gemini API (for dynamic topic naming)
+    gemini_api_key: str = ""  # Set via GEMINI_API_KEY env var
+    gemini_model: str = "gemini-1.5-flash"  # Fast and cheap for naming
+    topic_naming_enabled: bool = True  # Enable LLM-based topic naming
+
     @property
     def google_trends_keywords_list(self) -> list[str]:
         """Parse comma-separated keywords into list."""
