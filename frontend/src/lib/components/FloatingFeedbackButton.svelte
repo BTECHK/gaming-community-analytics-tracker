@@ -65,7 +65,7 @@
 
 {#if isOpen}
 	<div class="modal-overlay" onclick={closeModal} role="presentation">
-		<div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+		<div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={handleKeydown} role="dialog" aria-modal="true" aria-labelledby="feedback-title" tabindex="-1">
 			<div class="modal-header">
 				<h2 id="feedback-title">Send Feedback</h2>
 				<button class="close-btn" onclick={closeModal} aria-label="Close">
