@@ -203,7 +203,25 @@ export const api = {
 			method: 'POST',
 			body: JSON.stringify(request)
 		});
+	},
+
+	/**
+	 * Generate AI-powered digest summary for followed topics
+	 */
+	async getDigestSummary(slugs: string[]): Promise<DigestSummaryResponse> {
+		return fetchApi<DigestSummaryResponse>('/dashboard/digest/summary', {
+			method: 'POST',
+			body: JSON.stringify(slugs)
+		});
 	}
 };
+
+/** Response from digest summary endpoint */
+export interface DigestSummaryResponse {
+	summary: string;
+	generated_at: string;
+	topic_count: number;
+	is_ai_generated: boolean;
+}
 
 export default api;

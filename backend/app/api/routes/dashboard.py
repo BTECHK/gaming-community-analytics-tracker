@@ -187,3 +187,33 @@ async def trigger_aggregation(
     except Exception as e:
         logger.exception("Aggregation failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/digest/summary")
+async def generate_digest_summary(
+    slugs: list[str],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Generate an AI-powered summary of followed topics.
+
+    Args:
+        slugs: List of topic slugs to include in the digest.
+        db: Database session.
+
+    Returns:
+        Dict with summary text and metadata.
+    """
+    from app.services.digest import generate_digest_summary as gen_summary
+
+    service = AggregationService(db)
+
+    # Fetch topic data for each slug
+    topics = []
+    for slug in slugs[:10]:  # Limit to 10 topics
+        topic = await service.get_topic_by_slug(slug)
+        if topic:
+            topics.append(topic)
+
+    # Generate summary
+    result = await gen_summary(topics)
+    return result
