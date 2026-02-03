@@ -22,7 +22,7 @@ class TestTopicNaming:
         """Test fallback name for matchmaking keywords."""
         keywords = ["ranked", "queue", "mmr"]
         name = _get_fallback_name(keywords)
-        assert name == "Ranked & Matchmaking"
+        assert name == "Ranked Play"
 
     def test_get_fallback_name_balance(self):
         """Test fallback name for balance keywords."""
