@@ -42,3 +42,22 @@ secrets/
 
 # Strategic/competitive analysis - keep private
 .planning/decisions/ADR-002-competitive-analysis-feature-backlog-2026-01-30.md
+
+# Test outputs
+playwright-report/
+test-results/
+screenshots/
+
+# Archive directories
+docs/archive/
+
+# Portfolio skill test outputs
+portfolio-skill-test/
+portfolio-test-output/
+
+# Database backups (may contain sensitive data)
+database/backups/*.sql
+database/backups/*.dump
+database/backups/*.gz
+!database/backups/.gitkeep
+!database/backups/README.md

@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-communitypulse}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Uncomment to auto-init schema on fresh volume (runs once on first start):
+      # - ./database/docker/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -43,6 +45,7 @@ services:
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       YOUTUBE_CHANNEL_IDS: ${YOUTUBE_CHANNEL_IDS:-}
       YOUTUBE_SEARCH_QUERIES: ${YOUTUBE_SEARCH_QUERIES:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       NLP_WORKER_URL: http://nlp-worker:8001
       NLP_USE_WORKER: ${NLP_USE_WORKER:-true}
     ports:
