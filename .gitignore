@@ -55,6 +55,15 @@ docs/archive/
 portfolio-skill-test/
 portfolio-test-output/
 
+# Claude Code local settings
+.claude/settings.local.json
+
+# Generated tool outputs
+shadow-clone-output/
+
+# Large binary files
+*.mp4
+
 # Database backups (may contain sensitive data)
 database/backups/*.sql
 database/backups/*.dump
