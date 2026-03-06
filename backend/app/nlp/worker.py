@@ -36,7 +36,7 @@ _models_loaded = False
 class AnalyzeRequest(BaseModel):
     """Request body for batch analysis."""
 
-    texts: list[str] = Field(..., min_length=1, max_length=100)
+    texts: list[str] = Field(..., min_length=1, max_length=1000)
 
 
 class SentimentResultSchema(BaseModel):
@@ -52,7 +52,7 @@ class TopicResultSchema(BaseModel):
 
     primary_topic: str
     all_topics: list[str]
-    confidence: dict[str, float]
+    confidence: dict[str, float] | None = None
 
 
 class ToxicityResultSchema(BaseModel):
@@ -204,9 +204,9 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 
         topics_response = [
             TopicResultSchema(
-                primary_topic=r.primary_topic,
-                all_topics=r.all_topics,
-                confidence=r.confidence,
+                primary_topic=r.topics[0] if r.topics else "uncategorized",
+                all_topics=r.topics,
+                confidence=dict(zip(r.topics, r.probabilities)) if r.topics and r.probabilities else None,
             )
             for r in topic_results
         ]

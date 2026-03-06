@@ -149,7 +149,9 @@ class NLPService:
     def _get_text_for_analysis(self, post: Post) -> str:
         """Extract text to analyze from a post.
 
-        Prefers content, falls back to title.
+        Combines title and content for better topic detection context.
+        Title provides topic hints (champion names, event names) while
+        content provides sentiment details.
 
         Args:
             post: Post to extract text from.
@@ -157,11 +159,12 @@ class NLPService:
         Returns:
             Text string for sentiment analysis.
         """
-        if post.content and post.content.strip():
-            return post.content.strip()
+        parts = []
         if post.title and post.title.strip():
-            return post.title.strip()
-        return ""
+            parts.append(post.title.strip())
+        if post.content and post.content.strip():
+            parts.append(post.content.strip())
+        return " ".join(parts) if parts else ""
 
     def _analyze_batch_with_retry(
         self,
@@ -472,7 +475,7 @@ class NLPService:
             Worker response with sentiment, topics, toxicity or None on error.
         """
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=600.0) as client:  # 10 min for large batches
                 response = await client.post(
                     f"{self.settings.nlp_worker_url}/analyze",
                     json={"texts": texts},

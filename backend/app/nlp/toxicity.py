@@ -100,18 +100,18 @@ class ToxicityDetector:
 
                     # predictions format:
                     # {"toxicity": [0.1, 0.2], "severe_toxicity": [0.01, 0.02], ...}
+                    # Note: different model versions may have different keys
                     batch_size = len(batch)
                     for j in range(batch_size):
-                        categories = {
-                            "toxicity": predictions["toxicity"][j],
-                            "severe_toxicity": predictions["severe_toxicity"][j],
-                            "obscene": predictions["obscene"][j],
-                            "threat": predictions["threat"][j],
-                            "insult": predictions["insult"][j],
-                            "identity_hate": predictions["identity_hate"][j],
-                        }
+                        # Build categories dict from available keys
+                        categories = {}
+                        for key in ["toxicity", "severe_toxicity", "obscene",
+                                    "threat", "insult", "identity_hate", "identity_attack"]:
+                            if key in predictions:
+                                categories[key] = float(predictions[key][j])
 
-                        toxicity_score = categories["toxicity"]
+                        # Ensure we have at least a toxicity score
+                        toxicity_score = categories.get("toxicity", 0.0)
                         is_toxic = toxicity_score > self.threshold
 
                         results.append(
