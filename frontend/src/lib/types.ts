@@ -87,6 +87,7 @@ export interface TrendingResponse {
 	filters: {
 		themes: string[] | null;
 		platforms: string[] | null;
+		period_days: number;
 		limit: number;
 	};
 }

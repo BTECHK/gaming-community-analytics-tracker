@@ -92,10 +92,11 @@ export const api = {
 	/**
 	 * Get trending topics with optional theme and platform filters
 	 */
-	async getTrending(options?: { themes?: string[]; platforms?: string[]; limit?: number }): Promise<TrendingResponse> {
+	async getTrending(options?: { themes?: string[]; platforms?: string[]; periodDays?: number; limit?: number }): Promise<TrendingResponse> {
 		const endpoint = buildUrl('/dashboard/trending', {
 			theme: options?.themes,
 			platform: options?.platforms,
+			period_days: options?.periodDays,
 			limit: options?.limit
 		});
 		const cacheKey = `trending:${endpoint}`;

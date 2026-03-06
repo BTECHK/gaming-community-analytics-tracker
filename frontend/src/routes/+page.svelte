@@ -77,7 +77,8 @@
 			const [trendingRes, topicsRes, sourcesRes] = await Promise.all([
 				api.getTrending({
 					themes: filters.themes.length > 0 ? filters.themes : undefined,
-					platforms: filters.platforms.length > 0 ? filters.platforms : undefined
+					platforms: filters.platforms.length > 0 ? filters.platforms : undefined,
+					periodDays: parseInt(filters.dateRange)
 				}),
 				api.getTopics(),
 				api.getSources()
