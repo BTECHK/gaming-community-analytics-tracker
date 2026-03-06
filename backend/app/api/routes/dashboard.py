@@ -60,6 +60,7 @@ async def get_trending(
     db: Annotated[AsyncSession, Depends(get_db)],
     theme: Annotated[list[str] | None, Query(description="Filter by themes")] = None,
     platform: Annotated[list[str] | None, Query(description="Filter by platforms (youtube, official-news, tier-site, guide-site)")] = None,
+    period_days: Annotated[int, Query(ge=1, le=30, description="Filter by time period in days")] = 7,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> dict:
     """Get trending topics with sentiment data.
@@ -68,13 +69,16 @@ async def get_trending(
         db: Database session.
         theme: Optional list of theme names to filter by.
         platform: Optional list of platform names to filter by.
+        period_days: Number of days to look back (1-30, default 7).
         limit: Maximum topics to return (1-50).
 
     Returns:
         Dict containing list of trending topics.
     """
     service = AggregationService(db)
-    topics = await service.get_trending(themes=theme, platforms=platform, limit=limit)
+    topics = await service.get_trending(
+        themes=theme, platforms=platform, period_days=period_days, limit=limit,
+    )
 
     return {
         "topics": topics,
@@ -82,6 +86,7 @@ async def get_trending(
         "filters": {
             "themes": theme,
             "platforms": platform,
+            "period_days": period_days,
             "limit": limit,
         },
     }

@@ -217,6 +217,7 @@ class AggregationService:
         self,
         themes: list[str] | None = None,
         platforms: list[str] | None = None,
+        period_days: int = 7,
         limit: int = 10,
     ) -> list[dict]:
         """Get trending topics with sentiment data.
@@ -224,12 +225,18 @@ class AggregationService:
         Args:
             themes: Optional list of theme names to filter by.
             platforms: Optional list of platform names to filter by (topics must have posts from these platforms).
+            period_days: Only include aggregations with period_end within this many days.
             limit: Maximum topics to return.
 
         Returns:
             List of topic data dicts.
         """
-        stmt = select(Aggregation).order_by(Aggregation.post_count.desc())
+        cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
+        stmt = (
+            select(Aggregation)
+            .where(Aggregation.period_end >= cutoff)
+            .order_by(Aggregation.post_count.desc())
+        )
 
         if themes:
             # Filter by themes (case-insensitive partial match)
