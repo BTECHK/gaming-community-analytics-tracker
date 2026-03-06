@@ -119,6 +119,36 @@ async def get_stats(
     return await service.get_stats()
 
 
+@router.get("/sentiment-history")
+async def get_sentiment_history(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    period_days: Annotated[int, Query(ge=1, le=90)] = 30,
+    granularity: Annotated[str, Query(description="daily or weekly")] = "daily",
+) -> dict:
+    """Get time-series sentiment data for charts.
+
+    Returns:
+        Dict with history array of date/sentiment/count entries.
+    """
+    service = AggregationService(db)
+    history = await service.get_sentiment_history(period_days, granularity)
+    return {"history": history, "period_days": period_days, "granularity": granularity}
+
+
+@router.get("/activity")
+async def get_activity(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    period_days: Annotated[int, Query(ge=1, le=90)] = 30,
+) -> dict:
+    """Get hourly/daily activity distribution for heatmap.
+
+    Returns:
+        Dict with heatmap (7x24 matrix) and total_posts.
+    """
+    service = AggregationService(db)
+    return await service.get_activity_patterns(period_days)
+
+
 @router.get("/topics")
 async def list_topics(
     db: Annotated[AsyncSession, Depends(get_db)],

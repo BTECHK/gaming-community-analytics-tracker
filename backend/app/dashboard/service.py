@@ -554,6 +554,113 @@ class AggregationService:
             "total_posts": total_posts,
         }
 
+    async def get_sentiment_history(
+        self, period_days: int = 30, granularity: str = "daily"
+    ) -> list[dict]:
+        """Get time-series sentiment data for charts.
+
+        Args:
+            period_days: Number of days to look back.
+            granularity: 'daily' or 'weekly' bucketing.
+
+        Returns:
+            List of dicts with date, positive, neutral, negative, post_count.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
+
+        stmt = (
+            select(
+                func.date_trunc(
+                    "week" if granularity == "weekly" else "day",
+                    Post.created_at,
+                ).label("bucket"),
+                func.count(Post.id).label("post_count"),
+            )
+            .join(SentimentResult, SentimentResult.post_id == Post.id)
+            .where(Post.created_at >= cutoff)
+            .group_by("bucket")
+            .order_by("bucket")
+        )
+        result = await self.session.execute(stmt)
+        buckets = result.all()
+
+        if not buckets:
+            return []
+
+        # For each bucket, get sentiment breakdown
+        history = []
+        for bucket in buckets:
+            bucket_date = bucket.bucket
+            bucket_end = bucket_date + timedelta(days=7 if granularity == "weekly" else 1)
+
+            sent_stmt = (
+                select(
+                    SentimentResult.label,
+                    func.count(SentimentResult.id).label("cnt"),
+                )
+                .join(Post, Post.id == SentimentResult.post_id)
+                .where(
+                    and_(
+                        Post.created_at >= bucket_date,
+                        Post.created_at < bucket_end,
+                    )
+                )
+                .group_by(SentimentResult.label)
+            )
+            sent_result = await self.session.execute(sent_stmt)
+            sent_rows = sent_result.all()
+
+            total = sum(r.cnt for r in sent_rows)
+            counts = {r.label.value if hasattr(r.label, "value") else r.label: r.cnt for r in sent_rows}
+
+            history.append({
+                "date": bucket_date.isoformat(),
+                "positive": round(counts.get("positive", 0) / total * 100, 1) if total else 0,
+                "neutral": round(counts.get("neutral", 0) / total * 100, 1) if total else 0,
+                "negative": round(counts.get("negative", 0) / total * 100, 1) if total else 0,
+                "post_count": bucket.post_count,
+            })
+
+        return history
+
+    async def get_activity_patterns(self, period_days: int = 30) -> dict:
+        """Get hourly/daily activity distribution for heatmap.
+
+        Args:
+            period_days: Number of days to look back.
+
+        Returns:
+            Dict with heatmap (7x24 matrix) and total_posts.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
+
+        stmt = (
+            select(
+                func.extract("dow", Post.created_at).label("dow"),
+                func.extract("hour", Post.created_at).label("hour"),
+                func.count(Post.id).label("cnt"),
+            )
+            .where(Post.created_at >= cutoff)
+            .group_by("dow", "hour")
+        )
+
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        # Initialize 7x24 zero matrix (Mon=0 through Sun=6)
+        heatmap = [[0] * 24 for _ in range(7)]
+        total_posts = 0
+
+        for row in rows:
+            # PostgreSQL dow: 0=Sunday, 1=Monday, ..., 6=Saturday
+            # Convert to Mon=0: (dow + 6) % 7
+            day_idx = (int(row.dow) + 6) % 7
+            hour_idx = int(row.hour)
+            heatmap[day_idx][hour_idx] = row.cnt
+            total_posts += row.cnt
+
+        return {"heatmap": heatmap, "total_posts": total_posts}
+
     def _aggregation_to_dict(self, agg: Aggregation) -> dict:
         """Convert Aggregation model to API response dict.
 
