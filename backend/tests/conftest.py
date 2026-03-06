@@ -1,7 +1,9 @@
 """Pytest configuration and fixtures for backend tests."""
 
 import asyncio
+import os
 from typing import AsyncGenerator, Generator
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -11,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from app.main import app
 from app.database import Base, get_db
 from app.config import get_settings
+
+from tests.mocks.valkey_mock import MockValkeyJobStore
 
 
 # Test database URL (uses same DB but could use a separate test DB)
@@ -107,3 +111,45 @@ def sample_feedback_data() -> dict:
         "vote_type": "thumbs_up",
         "session_id": "test-session-123",
     }
+
+
+@pytest.fixture(autouse=True)
+def mock_valkey_store():
+    """Automatically mock ValkeyJobStore when VALKEY_URL is not set or is 'mock://'.
+
+    This fixture runs automatically for all tests and patches ValkeyJobStore
+    with MockValkeyJobStore to enable testing without a real Redis/Valkey instance.
+    """
+    valkey_url = os.environ.get("VALKEY_URL", "mock://")
+
+    if valkey_url == "mock://" or not valkey_url:
+        # Reset the mock instance before each test
+        MockValkeyJobStore.reset()
+
+        with patch(
+            "app.nlp.valkey_store.ValkeyJobStore",
+            MockValkeyJobStore,
+        ):
+            yield MockValkeyJobStore
+    else:
+        # Real Valkey URL provided, don't mock
+        yield None
+
+
+@pytest_asyncio.fixture
+async def valkey_mock_instance(mock_valkey_store):
+    """Get a MockValkeyJobStore instance for direct testing.
+
+    Use this fixture when you need to interact with the mock store directly
+    in your tests.
+    """
+    if mock_valkey_store is not None:
+        instance = await MockValkeyJobStore.get_instance()
+        yield instance
+        instance.clear_storage()
+        MockValkeyJobStore.reset()
+    else:
+        # When using real Valkey, import and return the real store
+        from app.nlp.valkey_store import ValkeyJobStore
+        instance = await ValkeyJobStore.get_instance()
+        yield instance
