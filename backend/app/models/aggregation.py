@@ -3,9 +3,12 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
+# Dialect-aware JSON type: JSONB on PostgreSQL, plain JSON on SQLite (tests)
+JSONVariant = JSON().with_variant(JSONB(), "postgresql")
 
 from app.database import Base
 
@@ -38,13 +41,13 @@ class Aggregation(Base):
     # Summary
     summary: Mapped[str | None] = mapped_column(Text)
     representative_quotes: Mapped[list | None] = mapped_column(
-        JSONB
+        JSONVariant
     )  # [{"text": "...", "source_url": "..."}]
 
     # Stats
     post_count: Mapped[int] = mapped_column(Integer, default=0)
     source_mix: Mapped[dict | None] = mapped_column(
-        JSONB
+        JSONVariant
     )  # {"reddit": 45, "youtube": 30, ...}
 
     # Time window
@@ -60,8 +63,8 @@ class Aggregation(Base):
 
     # Confidence/transparency
     confidence_score: Mapped[float | None] = mapped_column(Float)
-    sentiment_explanation: Mapped[dict | None] = mapped_column(JSONB)
-    confidence_breakdown: Mapped[dict | None] = mapped_column(JSONB)
+    sentiment_explanation: Mapped[dict | None] = mapped_column(JSONVariant)
+    confidence_breakdown: Mapped[dict | None] = mapped_column(JSONVariant)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

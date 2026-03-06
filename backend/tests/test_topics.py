@@ -53,7 +53,7 @@ class TestTopicNames:
 
     def test_topic_names_count(self):
         """Test that we have expected number of base topics."""
-        assert len(TOPIC_NAMES) == 5
+        assert len(TOPIC_NAMES) == 7
 
     def test_topic_names_match_seed_list(self):
         """Test that topic names count matches seed list."""

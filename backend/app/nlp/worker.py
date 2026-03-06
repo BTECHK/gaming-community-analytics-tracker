@@ -4,6 +4,7 @@ Runs as a separate container/process to isolate ML models from the main API.
 Provides REST API for NLP operations.
 """
 
+import gc
 import logging
 import os
 import signal
@@ -90,12 +91,18 @@ def load_models() -> None:
     try:
         logger.info("Loading sentiment analyzer...")
         _sentiment_analyzer = SentimentAnalyzer(batch_size=batch_size)
+        gc.collect()
+        logger.info("Sentiment analyzer loaded, freed unused memory")
 
         logger.info("Loading topic detector...")
         _topic_detector = TopicDetector(batch_size=batch_size)
+        gc.collect()
+        logger.info("Topic detector loaded, freed unused memory")
 
         logger.info("Loading toxicity detector...")
         _toxicity_detector = ToxicityDetector(batch_size=batch_size)
+        gc.collect()
+        logger.info("Toxicity detector loaded, freed unused memory")
 
         _models_loaded = True
         logger.info("All models loaded successfully")
@@ -184,41 +191,50 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=503, detail="Models not initialized")
 
     texts = request.texts
-    logger.info("Analyzing batch of %d texts", len(texts))
+    batch_size = int(os.environ.get("NLP_BATCH_SIZE", "50"))
+    logger.info("Analyzing batch of %d texts (sub-batch size: %d)", len(texts), batch_size)
 
     try:
-        # Run analysis
-        sentiment_results = _sentiment_analyzer.analyze_batch(texts)
-        topic_results = _topic_detector.detect_batch(texts)
-        toxicity_results = _toxicity_detector.detect_batch(texts)
+        sentiment_response: list[SentimentResultSchema] = []
+        topics_response: list[TopicResultSchema] = []
+        toxicity_response: list[ToxicityResultSchema] = []
 
-        # Convert to response schemas
-        sentiment_response = [
-            SentimentResultSchema(
-                label=r.label,
-                confidence=r.confidence,
-                scores=r.scores,
-            )
-            for r in sentiment_results
-        ]
+        # Process in sub-batches to avoid peak memory spikes
+        for i in range(0, len(texts), batch_size):
+            sub_batch = texts[i : i + batch_size]
+            logger.info("Processing sub-batch %d-%d of %d", i, i + len(sub_batch), len(texts))
 
-        topics_response = [
-            TopicResultSchema(
-                primary_topic=r.topics[0] if r.topics else "uncategorized",
-                all_topics=r.topics,
-                confidence=dict(zip(r.topics, r.probabilities)) if r.topics and r.probabilities else None,
+            sentiment_results = _sentiment_analyzer.analyze_batch(sub_batch)
+            sentiment_response.extend(
+                SentimentResultSchema(
+                    label=r.label,
+                    confidence=r.confidence,
+                    scores=r.scores,
+                )
+                for r in sentiment_results
             )
-            for r in topic_results
-        ]
 
-        toxicity_response = [
-            ToxicityResultSchema(
-                is_toxic=r.is_toxic,
-                toxicity_score=r.toxicity_score,
-                categories=r.categories,
+            topic_results = _topic_detector.detect_batch(sub_batch)
+            topics_response.extend(
+                TopicResultSchema(
+                    primary_topic=r.topics[0] if r.topics else "uncategorized",
+                    all_topics=r.topics,
+                    confidence=dict(zip(r.topics, r.probabilities)) if r.topics and r.probabilities else None,
+                )
+                for r in topic_results
             )
-            for r in toxicity_results
-        ]
+
+            toxicity_results = _toxicity_detector.detect_batch(sub_batch)
+            toxicity_response.extend(
+                ToxicityResultSchema(
+                    is_toxic=r.is_toxic,
+                    toxicity_score=r.toxicity_score,
+                    categories=r.categories,
+                )
+                for r in toxicity_results
+            )
+
+            gc.collect()
 
         return AnalyzeResponse(
             sentiment=sentiment_response,

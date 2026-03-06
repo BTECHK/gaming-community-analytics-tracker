@@ -4,10 +4,13 @@ import enum
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
+# Dialect-aware JSON type: JSONB on PostgreSQL, plain JSON on SQLite (tests)
+JSONVariant = JSON().with_variant(JSONB(), "postgresql")
 
 from app.database import Base
 
@@ -54,12 +57,12 @@ class SentimentResult(Base):
 
     # Detailed scores (optional, depends on model output)
     scores: Mapped[dict | None] = mapped_column(
-        JSONB
+        JSONVariant
     )  # {"positive": 0.8, "neutral": 0.15, "negative": 0.05}
 
     # Topic detection
     topics: Mapped[list | None] = mapped_column(
-        JSONB
+        JSONVariant
     )  # ["matchmaking", "balance"]
 
     # Toxicity flag

@@ -69,15 +69,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile.nlp
     environment:
-      NLP_BATCH_SIZE: ${NLP_BATCH_SIZE:-32}
+      NLP_BATCH_SIZE: ${NLP_BATCH_SIZE:-50}
       NLP_WORKER_HOST: 0.0.0.0
       NLP_WORKER_PORT: 8001
     ports:
       - "8001:8001"
     volumes:
       - ./backend:/app
-    mem_limit: 4g
-    mem_reservation: 2g
+    mem_limit: 6g
+    mem_reservation: 3g
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/ready')"]
       interval: 30s
