@@ -6,14 +6,25 @@
 
 	let { patch, lastUpdated }: Props = $props();
 
-	const formattedDate = $derived(lastUpdated ? new Date(lastUpdated).toLocaleString() : null);
+	const formattedDate = $derived(() => {
+		if (!lastUpdated) return null;
+		const date = new Date(lastUpdated);
+		const formatter = new Intl.DateTimeFormat(undefined, {
+			month: 'numeric',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit',
+			timeZoneName: 'short'
+		});
+		return formatter.format(date);
+	});
 </script>
 
 <div class="patch-badge">
 	<span class="patch-label">Patch</span>
 	<span class="patch-version">{patch}</span>
-	{#if formattedDate}
-		<span class="last-updated">Updated {formattedDate}</span>
+	{#if formattedDate()}
+		<span class="last-updated">Updated {formattedDate()}</span>
 	{/if}
 </div>
 

@@ -166,13 +166,13 @@
 
 	.nav-item:hover {
 		background: rgba(139, 92, 246, 0.1);
-		color: var(--color-text-primary);
+		color: #FFFFFF;
 	}
 
 	.nav-item.active {
 		background: rgba(139, 92, 246, 0.15);
 		border-left-color: var(--color-accent);
-		color: var(--color-text-primary);
+		color: #FFFFFF;
 	}
 
 	.nav-icon {
