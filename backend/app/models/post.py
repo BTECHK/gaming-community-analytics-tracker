@@ -20,6 +20,9 @@ class Platform(str, enum.Enum):
     TierSite = "tier-site"
     GOOGLE_TRENDS = "google_trends"
     GUIDE_SITE = "guide-site"
+    NEWS_SOURCE_A = "news-source-a"
+    NEWS_SOURCE_B = "news-source-b"
+    REDDIT = "reddit"
 
 
 def utcnow() -> datetime:
