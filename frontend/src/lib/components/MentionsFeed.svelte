@@ -16,7 +16,10 @@
 			official-news: 'R',
 			tier-site: 'O',
 			guide-site: 'M',
-			google_trends: 'G'
+			google_trends: 'G',
+			news-source-a: 'D',
+			news-source-b: 'E',
+			reddit: 'r'
 		};
 		return icons[platform] || '?';
 	}
@@ -153,6 +156,18 @@
 
 	.mention-icon[data-platform='google_trends'] {
 		background: var(--color-google-trends);
+	}
+
+	.mention-icon[data-platform='news-source-a'] {
+		background: var(--color-news-source-a);
+	}
+
+	.mention-icon[data-platform='news-source-b'] {
+		background: var(--color-news-source-b);
+	}
+
+	.mention-icon[data-platform='reddit'] {
+		background: var(--color-reddit);
 	}
 
 	.mention-content {

@@ -13,7 +13,10 @@
 		official-news: 'OfficialNews',
 		tier-site: 'TierSite',
 		guide-site: 'GuideSite',
-		google_trends: 'Google Trends'
+		google_trends: 'Google Trends',
+		news-source-a: 'NewsSourceA',
+		news-source-b: 'News Source B',
+		reddit: 'Reddit'
 	};
 </script>
 
@@ -68,5 +71,20 @@
 	.source-badge[data-platform='google_trends'] {
 		background: rgba(66, 133, 244, 0.15);
 		color: var(--color-google-trends);
+	}
+
+	.source-badge[data-platform='news-source-a'] {
+		background: rgba(230, 57, 70, 0.15);
+		color: var(--color-news-source-a);
+	}
+
+	.source-badge[data-platform='news-source-b'] {
+		background: rgba(0, 180, 216, 0.15);
+		color: var(--color-news-source-b);
+	}
+
+	.source-badge[data-platform='reddit'] {
+		background: rgba(255, 69, 0, 0.15);
+		color: var(--color-reddit);
 	}
 </style>

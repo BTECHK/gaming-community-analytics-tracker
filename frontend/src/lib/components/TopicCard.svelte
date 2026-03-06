@@ -203,4 +203,16 @@
 	.platform-badge[data-platform='guide-site'] {
 		color: var(--color-guide-site);
 	}
+
+	.platform-badge[data-platform='news-source-a'] {
+		color: var(--color-news-source-a);
+	}
+
+	.platform-badge[data-platform='news-source-b'] {
+		color: var(--color-news-source-b);
+	}
+
+	.platform-badge[data-platform='reddit'] {
+		color: var(--color-reddit);
+	}
 </style>

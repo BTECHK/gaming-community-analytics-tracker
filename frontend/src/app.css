@@ -46,6 +46,9 @@
   --color-tier-site: #5383E8;
   --color-guide-site: #FF6B35;
   --color-google-trends: #4285F4;
+  --color-news-source-a: #E63946;
+  --color-news-source-b: #00B4D8;
+  --color-reddit: #FF4500;
 
   /* Typography */
   --font-family: Inter, system-ui, -apple-system, sans-serif;

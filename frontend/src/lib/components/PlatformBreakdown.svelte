@@ -12,8 +12,8 @@
 		tier-site: 'var(--color-tier-site, #5383E8)',
 		guide-site: 'var(--color-guide-site, #E25822)',
 		google_trends: 'var(--color-google-trends, #4285F4)',
-		news-source-a: 'var(--color-news-source-a, #0066FF)',
-		news-source-b: 'var(--color-news-source-b, #FF6B35)',
+		news-source-a: 'var(--color-news-source-a, #E63946)',
+		news-source-b: 'var(--color-news-source-b, #00B4D8)',
 		reddit: 'var(--color-reddit, #FF4500)',
 	};
 

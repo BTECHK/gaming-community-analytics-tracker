@@ -1,5 +1,5 @@
 /** Platform sources for content */
-export type Platform = 'youtube' | 'official-news' | 'tier-site' | 'guide-site' | 'google_trends';
+export type Platform = 'youtube' | 'official-news' | 'tier-site' | 'guide-site' | 'google_trends' | 'news-source-a' | 'news-source-b' | 'reddit';
 
 /** Sentiment label values */
 export type SentimentLabel = 'positive' | 'neutral' | 'negative';
