@@ -277,7 +277,8 @@ class AggregationService:
             topic_dict = self._aggregation_to_dict(agg)
             try:
                 velocity = await self.get_topic_velocity(agg.topic_slug, period_days)
-            except Exception:
+            except Exception as e:
+                logger.warning("Velocity calculation failed for %s: %s", agg.topic_slug, e)
                 velocity = {"velocity_label": None, "velocity_pct": 0.0}
             topic_dict["velocity_label"] = velocity["velocity_label"]
             topic_dict["velocity_pct"] = velocity["velocity_pct"]

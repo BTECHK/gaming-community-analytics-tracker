@@ -32,11 +32,11 @@
 	}
 
 	.rising {
-		color: #22C55E;
+		color: var(--color-positive);
 	}
 
 	.cooling {
-		color: #EF4444;
+		color: var(--color-negative);
 	}
 
 	.steady {

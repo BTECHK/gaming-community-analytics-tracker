@@ -496,8 +496,8 @@ class NLPSentimentResponse(BaseModel):
     status: str
 
 
-@router.get("/nlp/status")
-async def get_nlp_status(session: SessionDep) -> NLPStatusResponse:
+@router.get("/ingestion/nlp-stats")
+async def get_nlp_stats(session: SessionDep) -> NLPStatusResponse:
     """Get NLP processing status and configuration.
 
     Returns statistics on posts with/without sentiment analysis
@@ -514,7 +514,7 @@ async def get_nlp_status(session: SessionDep) -> NLPStatusResponse:
     )
 
 
-@router.post("/nlp/sentiment")
+@router.post("/ingestion/nlp-sentiment")
 async def trigger_sentiment_analysis(session: SessionDep) -> NLPSentimentResponse:
     """Manually trigger sentiment analysis on unprocessed posts.
 

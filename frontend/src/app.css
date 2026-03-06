@@ -82,6 +82,11 @@
   --radius-xl: 16px;
   --radius-full: 9999px;
 
+  /* Surface & tertiary */
+  --color-surface: var(--color-bg-card);
+  --color-text-tertiary: #52525B;
+  --color-accent-hover: #9D7AE8;
+
   /* Shadows */
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 60px rgba(139, 92, 246, 0.3);

@@ -10,13 +10,6 @@
 
 	let { topic }: Props = $props();
 
-	const dominantSentiment = $derived(() => {
-		const { positive, neutral, negative } = topic.sentiment;
-		if (positive >= neutral && positive >= negative) return 'positive';
-		if (negative >= positive && negative >= neutral) return 'negative';
-		return 'neutral';
-	});
-
 	const topQuotes = $derived(topic.quotes.slice(0, 2));
 </script>
 
@@ -202,6 +195,10 @@
 
 	.platform-badge[data-platform='guide-site'] {
 		color: var(--color-guide-site);
+	}
+
+	.platform-badge[data-platform='google_trends'] {
+		color: var(--color-google-trends);
 	}
 
 	.platform-badge[data-platform='news-source-a'] {
