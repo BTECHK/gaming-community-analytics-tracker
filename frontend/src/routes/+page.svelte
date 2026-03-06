@@ -3,14 +3,20 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import api from '$lib/api';
-	import type { Topic, TopicNavItem, FilterState, Quote, StatsResponse } from '$lib/types';
+	import type {
+		Topic, TopicNavItem, FilterState, Quote, StatsResponse,
+		SentimentHistoryEntry, ActivityResponse
+	} from '$lib/types';
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import FreshnessIndicator from '$lib/components/FreshnessIndicator.svelte';
 	import TopicCard from '$lib/components/TopicCard.svelte';
 	import MentionsFeed from '$lib/components/MentionsFeed.svelte';
 	import TopicCloud from '$lib/components/TopicCloud.svelte';
-	import SourcesCard from '$lib/components/SourcesCard.svelte';
 	import StatsBanner from '$lib/components/StatsBanner.svelte';
+	import SentimentDonut from '$lib/components/SentimentDonut.svelte';
+	import MentionsTimeline from '$lib/components/MentionsTimeline.svelte';
+	import ActivityHeatmap from '$lib/components/ActivityHeatmap.svelte';
+	import PlatformBreakdown from '$lib/components/PlatformBreakdown.svelte';
 	import FollowButton from '$lib/components/FollowButton.svelte';
 	import LazyLoad from '$lib/components/LazyLoad.svelte';
 
@@ -20,6 +26,8 @@
 	let sources: Record<string, number> = $state({});
 	let sourcePercentages: Record<string, number> = $state({});
 	let stats: StatsResponse | null = $state(null);
+	let sentimentHistory: SentimentHistoryEntry[] = $state([]);
+	let activityData: ActivityResponse | null = $state(null);
 	let lastUpdated = $state<string | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -35,6 +43,17 @@
 	const allQuotes = $derived<Quote[]>(
 		topics.flatMap((t) => t.quotes).slice(0, 20)
 	);
+
+	// Overall sentiment from history data
+	const overallSentiment = $derived(() => {
+		if (sentimentHistory.length === 0) return { positive: 0, neutral: 0, negative: 0 };
+		const total = sentimentHistory.length;
+		return {
+			positive: sentimentHistory.reduce((s, h) => s + h.positive, 0) / total,
+			neutral: sentimentHistory.reduce((s, h) => s + h.neutral, 0) / total,
+			negative: sentimentHistory.reduce((s, h) => s + h.negative, 0) / total,
+		};
+	});
 
 	// Parse URL parameters on mount and when URL changes
 	function parseUrlFilters() {
@@ -78,7 +97,7 @@
 		error = null;
 
 		try {
-			const [trendingRes, topicsRes, sourcesRes, statsRes] = await Promise.all([
+			const [trendingRes, topicsRes, sourcesRes, statsRes, historyRes, activityRes] = await Promise.all([
 				api.getTrending({
 					themes: filters.themes.length > 0 ? filters.themes : undefined,
 					platforms: filters.platforms.length > 0 ? filters.platforms : undefined,
@@ -86,7 +105,9 @@
 				}),
 				api.getTopics(),
 				api.getSources(),
-				api.getStats()
+				api.getStats(),
+				api.getSentimentHistory(),
+				api.getActivity()
 			]);
 
 			topics = trendingRes.topics;
@@ -95,6 +116,8 @@
 			sources = sourcesRes.sources;
 			sourcePercentages = sourcesRes.percentages;
 			stats = statsRes;
+			sentimentHistory = historyRes.history;
+			activityData = activityRes;
 		} catch (e) {
 			console.error('Failed to load dashboard data:', e);
 			error = e instanceof Error ? e.message : 'Failed to load data';
@@ -122,16 +145,18 @@
 </svelte:head>
 
 <div class="dashboard">
+	<!-- Row 1: Stats Banner -->
 	{#if stats}
 		<StatsBanner {stats} />
 	{/if}
+
 	<FilterBar {filters} onFiltersChange={handleFiltersChange} />
 	<FreshnessIndicator {lastUpdated} />
 
 	{#if loading}
 		<div class="loading-state">
 			<div class="loading-grid">
-				{#each Array(4) as _, i}
+				{#each Array(6) as _}
 					<div class="skeleton-card skeleton"></div>
 				{/each}
 			</div>
@@ -139,14 +164,26 @@
 	{:else if error}
 		<div class="error-state">
 			<p class="error-message">{error}</p>
-			<button class="btn btn-primary" onclick={loadData}>
-				Retry
-			</button>
+			<button class="btn btn-primary" onclick={loadData}>Retry</button>
 		</div>
 	{:else}
-		<div class="dashboard-grid">
-			<!-- Main content area -->
-			<div class="main-column">
+		<!-- Row 2: Sentiment Donut + Activity Timeline -->
+		<div class="tile-row row-2">
+			<div class="tile-1col">
+				<SentimentDonut
+					positive={overallSentiment().positive}
+					neutral={overallSentiment().neutral}
+					negative={overallSentiment().negative}
+				/>
+			</div>
+			<div class="tile-2col">
+				<MentionsTimeline data={sentimentHistory} />
+			</div>
+		</div>
+
+		<!-- Row 3: Trending Topics + Mentions Feed -->
+		<div class="tile-row row-3">
+			<div class="tile-2col">
 				<section class="section">
 					<h2 class="section-title">Trending Topics</h2>
 					{#if topics.length > 0}
@@ -169,21 +206,31 @@
 						</div>
 					{/if}
 				</section>
-
-				<section class="section">
-					<LazyLoad minHeight="150px">
-						<TopicCloud topics={allTopics} />
-					</LazyLoad>
-				</section>
 			</div>
+			<div class="tile-1col">
+				<MentionsFeed quotes={allQuotes} />
+			</div>
+		</div>
 
-			<!-- Sidebar content -->
-			<div class="side-column">
-				<LazyLoad minHeight="300px">
-					<MentionsFeed quotes={allQuotes} />
-				</LazyLoad>
+		<!-- Row 4: Activity Heatmap + Platform Breakdown -->
+		<div class="tile-row row-4">
+			<div class="tile-2col">
 				<LazyLoad minHeight="200px">
-					<SourcesCard {sources} percentages={sourcePercentages} />
+					{#if activityData}
+						<ActivityHeatmap heatmap={activityData.heatmap} />
+					{/if}
+				</LazyLoad>
+			</div>
+			<div class="tile-1col">
+				<PlatformBreakdown {sources} percentages={sourcePercentages} />
+			</div>
+		</div>
+
+		<!-- Row 5: Topic Cloud -->
+		<div class="tile-row row-5">
+			<div class="tile-full">
+				<LazyLoad minHeight="150px">
+					<TopicCloud topics={allTopics} />
 				</LazyLoad>
 			</div>
 		</div>
@@ -194,43 +241,48 @@
 	.dashboard {
 		display: flex;
 		flex-direction: column;
-		gap: var(--spacing-xl);
+		gap: var(--spacing-lg);
 	}
 
-	.dashboard-grid {
+	/* Tile rows: 3-column grid */
+	.tile-row {
 		display: grid;
-		grid-template-columns: 1fr 350px;
-		gap: var(--spacing-xl);
+		grid-template-columns: 1fr 2fr;
+		gap: var(--spacing-lg);
 	}
 
-	@media (max-width: 1200px) {
-		.dashboard-grid {
-			grid-template-columns: 1fr;
-		}
+	.tile-row.row-3,
+	.tile-row.row-4 {
+		grid-template-columns: 2fr 1fr;
+	}
 
-		.side-column {
-			display: grid;
+	.tile-row.row-5 {
+		grid-template-columns: 1fr;
+	}
+
+	.tile-1col,
+	.tile-2col,
+	.tile-full {
+		min-width: 0;
+	}
+
+	/* Responsive: collapse to single column */
+	@media (max-width: 1200px) {
+		.tile-row {
 			grid-template-columns: 1fr 1fr;
-			gap: var(--spacing-lg);
+		}
+		.tile-row.row-3,
+		.tile-row.row-4 {
+			grid-template-columns: 1fr 1fr;
 		}
 	}
 
 	@media (max-width: 768px) {
-		.side-column {
+		.tile-row,
+		.tile-row.row-3,
+		.tile-row.row-4 {
 			grid-template-columns: 1fr;
 		}
-	}
-
-	.main-column {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xl);
-	}
-
-	.side-column {
-		display: flex;
-		flex-direction: column;
-		gap: var(--spacing-xl);
 	}
 
 	.section {
@@ -248,7 +300,7 @@
 
 	.topic-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 		gap: var(--spacing-lg);
 	}
 
@@ -269,7 +321,7 @@
 
 	.loading-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 		gap: var(--spacing-lg);
 	}
 
