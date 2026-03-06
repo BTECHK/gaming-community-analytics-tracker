@@ -36,10 +36,12 @@
 	function parseUrlFilters() {
 		const url = $page.url;
 		const themeParam = url.searchParams.getAll('theme');
+		const platformParam = url.searchParams.getAll('platform') as FilterState['platforms'];
+		const dateRangeParam = url.searchParams.get('dateRange') as FilterState['dateRange'] | null;
 		filters = {
 			themes: themeParam,
-			platforms: [],
-			dateRange: '7d'
+			platforms: platformParam,
+			dateRange: dateRangeParam || '7d'
 		};
 	}
 
@@ -47,8 +49,16 @@
 	function updateUrl(newFilters: FilterState) {
 		const url = new URL(window.location.href);
 		url.searchParams.delete('theme');
+		url.searchParams.delete('platform');
+		url.searchParams.delete('dateRange');
 		for (const theme of newFilters.themes) {
 			url.searchParams.append('theme', theme);
+		}
+		for (const platform of newFilters.platforms) {
+			url.searchParams.append('platform', platform);
+		}
+		if (newFilters.dateRange !== '7d') {
+			url.searchParams.set('dateRange', newFilters.dateRange);
 		}
 		goto(url.pathname + url.search, { replaceState: true, noScroll: true });
 	}
@@ -65,7 +75,10 @@
 
 		try {
 			const [trendingRes, topicsRes, sourcesRes] = await Promise.all([
-				api.getTrending({ themes: filters.themes.length > 0 ? filters.themes : undefined }),
+				api.getTrending({
+					themes: filters.themes.length > 0 ? filters.themes : undefined,
+					platforms: filters.platforms.length > 0 ? filters.platforms : undefined
+				}),
 				api.getTopics(),
 				api.getSources()
 			]);

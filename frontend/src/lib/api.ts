@@ -90,11 +90,12 @@ function buildUrl(endpoint: string, params: Record<string, string | string[] | n
  */
 export const api = {
 	/**
-	 * Get trending topics with optional theme filter
+	 * Get trending topics with optional theme and platform filters
 	 */
-	async getTrending(options?: { themes?: string[]; limit?: number }): Promise<TrendingResponse> {
+	async getTrending(options?: { themes?: string[]; platforms?: string[]; limit?: number }): Promise<TrendingResponse> {
 		const endpoint = buildUrl('/dashboard/trending', {
 			theme: options?.themes,
+			platform: options?.platforms,
 			limit: options?.limit
 		});
 		const cacheKey = `trending:${endpoint}`;

@@ -59,6 +59,7 @@ async def get_patch_pulse(
 async def get_trending(
     db: Annotated[AsyncSession, Depends(get_db)],
     theme: Annotated[list[str] | None, Query(description="Filter by themes")] = None,
+    platform: Annotated[list[str] | None, Query(description="Filter by platforms (youtube, official-news, tier-site, guide-site)")] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
 ) -> dict:
     """Get trending topics with sentiment data.
@@ -66,19 +67,21 @@ async def get_trending(
     Args:
         db: Database session.
         theme: Optional list of theme names to filter by.
+        platform: Optional list of platform names to filter by.
         limit: Maximum topics to return (1-50).
 
     Returns:
         Dict containing list of trending topics.
     """
     service = AggregationService(db)
-    topics = await service.get_trending(themes=theme, limit=limit)
+    topics = await service.get_trending(themes=theme, platforms=platform, limit=limit)
 
     return {
         "topics": topics,
         "count": len(topics),
         "filters": {
             "themes": theme,
+            "platforms": platform,
             "limit": limit,
         },
     }

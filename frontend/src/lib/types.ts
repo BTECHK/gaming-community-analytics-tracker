@@ -86,6 +86,7 @@ export interface TrendingResponse {
 	count: number;
 	filters: {
 		themes: string[] | null;
+		platforms: string[] | null;
 		limit: number;
 	};
 }

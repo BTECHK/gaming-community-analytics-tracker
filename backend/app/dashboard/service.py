@@ -216,12 +216,14 @@ class AggregationService:
     async def get_trending(
         self,
         themes: list[str] | None = None,
+        platforms: list[str] | None = None,
         limit: int = 10,
     ) -> list[dict]:
         """Get trending topics with sentiment data.
 
         Args:
             themes: Optional list of theme names to filter by.
+            platforms: Optional list of platform names to filter by (topics must have posts from these platforms).
             limit: Maximum topics to return.
 
         Returns:
@@ -236,10 +238,25 @@ class AggregationService:
                 theme_filters.append(Aggregation.topic_name.ilike(f"%{theme}%"))
             stmt = stmt.where(or_(*theme_filters))
 
-        stmt = stmt.limit(limit)
+        # If filtering by platforms, we need to fetch more and filter in Python
+        # since source_mix is a JSON column
+        if platforms:
+            stmt = stmt.limit(limit * 3)  # Fetch extra to account for filtering
+        else:
+            stmt = stmt.limit(limit)
 
         result = await self.session.execute(stmt)
         aggregations = result.scalars().all()
+
+        # Filter by platforms if specified
+        if platforms:
+            platform_set = set(p.lower() for p in platforms)
+            aggregations = [
+                agg for agg in aggregations
+                if agg.source_mix and any(
+                    src.lower() in platform_set for src in agg.source_mix.keys()
+                )
+            ][:limit]
 
         return [self._aggregation_to_dict(agg) for agg in aggregations]
 
