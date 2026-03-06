@@ -21,6 +21,15 @@ from tests.mocks.valkey_mock import MockValkeyJobStore
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
+@pytest.fixture(autouse=True)
+def clear_feedback_rate_limit():
+    """Clear the in-memory rate limit store between tests to avoid cross-test interference."""
+    from app.api.routes.feedback import _rate_limit_store
+    _rate_limit_store.clear()
+    yield
+    _rate_limit_store.clear()
+
+
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create an event loop for the test session."""
