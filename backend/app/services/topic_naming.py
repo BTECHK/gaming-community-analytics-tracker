@@ -6,7 +6,6 @@ concise, human-readable topic names using Google's Gemini API.
 
 import asyncio
 import logging
-from functools import lru_cache
 
 import httpx
 

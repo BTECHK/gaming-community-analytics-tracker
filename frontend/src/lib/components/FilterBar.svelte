@@ -13,6 +13,7 @@
 		{ id: 'official-news', name: 'OfficialNews', color: 'var(--color-official-news)' },
 		{ id: 'tier-site', name: 'TierSite', color: 'var(--color-tier-site)' },
 		{ id: 'guide-site', name: 'GuideSite', color: 'var(--color-guide-site)' },
+		{ id: 'google_trends', name: 'Trends', color: 'var(--color-google-trends)' },
 		{ id: 'news-source-a', name: 'NewsSourceA', color: 'var(--color-news-source-a)' },
 		{ id: 'news-source-b', name: 'NewsSourceB', color: 'var(--color-news-source-b)' },
 		{ id: 'reddit', name: 'Reddit', color: 'var(--color-reddit)' }
