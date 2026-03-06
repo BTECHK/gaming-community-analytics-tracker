@@ -5,6 +5,7 @@
 	import api from '$lib/api';
 	import type { Topic, TopicNavItem, FilterState, Quote } from '$lib/types';
 	import FilterBar from '$lib/components/FilterBar.svelte';
+	import FreshnessIndicator from '$lib/components/FreshnessIndicator.svelte';
 	import TopicCard from '$lib/components/TopicCard.svelte';
 	import MentionsFeed from '$lib/components/MentionsFeed.svelte';
 	import TopicCloud from '$lib/components/TopicCloud.svelte';
@@ -17,6 +18,7 @@
 	let allTopics: TopicNavItem[] = $state([]);
 	let sources: Record<string, number> = $state({});
 	let sourcePercentages: Record<string, number> = $state({});
+	let lastUpdated = $state<string | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
@@ -85,6 +87,7 @@
 			]);
 
 			topics = trendingRes.topics;
+			lastUpdated = trendingRes.last_updated;
 			allTopics = topicsRes.topics;
 			sources = sourcesRes.sources;
 			sourcePercentages = sourcesRes.percentages;
@@ -116,6 +119,7 @@
 
 <div class="dashboard">
 	<FilterBar {filters} onFiltersChange={handleFiltersChange} />
+	<FreshnessIndicator {lastUpdated} />
 
 	{#if loading}
 		<div class="loading-state">
