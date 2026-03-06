@@ -381,6 +381,97 @@ class AggregationService:
 
         return {"velocity_label": label, "velocity_pct": round(pct_change, 1)}
 
+    async def calculate_pulse_score(self) -> dict:
+        """Calculate Community Pulse Score (0-100).
+
+        Formula: sentiment_health (40%) + topic_diversity (30%) + volume_health (30%).
+
+        Returns:
+            Dict with pulse_score, label, and breakdown.
+        """
+        # Get recent aggregations
+        stmt = select(Aggregation).order_by(Aggregation.post_count.desc())
+        result = await self.session.execute(stmt)
+        aggregations = list(result.scalars().all())
+
+        if not aggregations:
+            return {
+                "pulse_score": 0,
+                "label": "Critical",
+                "breakdown": {
+                    "sentiment_health": {"score": 0, "weight": 0.4},
+                    "topic_diversity": {"score": 0, "weight": 0.3},
+                    "volume_health": {"score": 0, "weight": 0.3},
+                },
+            }
+
+        # sentiment_health: average positive sentiment % scaled to 0-100
+        avg_positive = sum(a.sentiment_positive for a in aggregations) / len(aggregations)
+        sentiment_health = min(avg_positive, 100.0)
+
+        # topic_diversity: min(active_topic_count / 5, 1.0) * 100
+        topic_diversity = min(len(aggregations) / 5.0, 1.0) * 100
+
+        # volume_health: min(total_recent_posts / 50, 1.0) * 100
+        total_posts = sum(a.post_count for a in aggregations)
+        volume_health = min(total_posts / 50.0, 1.0) * 100
+
+        pulse_score = round(
+            sentiment_health * 0.4 + topic_diversity * 0.3 + volume_health * 0.3
+        )
+
+        if pulse_score <= 33:
+            label = "Critical"
+        elif pulse_score <= 66:
+            label = "Mixed"
+        else:
+            label = "Healthy"
+
+        return {
+            "pulse_score": pulse_score,
+            "label": label,
+            "breakdown": {
+                "sentiment_health": {"score": round(sentiment_health, 1), "weight": 0.4},
+                "topic_diversity": {"score": round(topic_diversity, 1), "weight": 0.3},
+                "volume_health": {"score": round(volume_health, 1), "weight": 0.3},
+            },
+        }
+
+    async def get_stats(self) -> dict:
+        """Get stats summary for dashboard banner.
+
+        Returns:
+            Dict with posts_analyzed, active_topics, sources_active, pulse_score, pulse_label.
+        """
+        # posts_analyzed: count of posts that have sentiment results
+        posts_stmt = (
+            select(func.count(Post.id))
+            .join(SentimentResult, SentimentResult.post_id == Post.id)
+        )
+        posts_result = await self.session.execute(posts_stmt)
+        posts_analyzed = posts_result.scalar() or 0
+
+        # active_topics: count of aggregations
+        topics_stmt = select(func.count(Aggregation.id))
+        topics_result = await self.session.execute(topics_stmt)
+        active_topics = topics_result.scalar() or 0
+
+        # sources_active: count of distinct platforms in posts
+        sources_stmt = select(func.count(func.distinct(Post.platform)))
+        sources_result = await self.session.execute(sources_stmt)
+        sources_active = sources_result.scalar() or 0
+
+        # Reuse pulse score
+        pulse = await self.calculate_pulse_score()
+
+        return {
+            "posts_analyzed": posts_analyzed,
+            "active_topics": active_topics,
+            "sources_active": sources_active,
+            "pulse_score": pulse["pulse_score"],
+            "pulse_label": pulse["label"],
+        }
+
     async def get_source_distribution(self) -> dict[str, int]:
         """Get overall source distribution across all posts.
 

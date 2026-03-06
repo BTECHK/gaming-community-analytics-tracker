@@ -93,6 +93,32 @@ async def get_trending(
     }
 
 
+@router.get("/pulse")
+async def get_pulse(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Get Community Pulse Score.
+
+    Returns:
+        Dict with pulse_score (0-100), label, and breakdown.
+    """
+    service = AggregationService(db)
+    return await service.calculate_pulse_score()
+
+
+@router.get("/stats")
+async def get_stats(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    """Get stats summary for dashboard banner.
+
+    Returns:
+        Dict with posts_analyzed, active_topics, sources_active, pulse_score, pulse_label.
+    """
+    service = AggregationService(db)
+    return await service.get_stats()
+
+
 @router.get("/topics")
 async def list_topics(
     db: Annotated[AsyncSession, Depends(get_db)],
