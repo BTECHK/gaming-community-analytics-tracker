@@ -47,10 +47,17 @@
 
 <style>
 	.topic-cloud {
-		background: var(--color-bg-card);
+		background: rgba(18, 18, 26, 0.8);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
 		padding: var(--spacing-lg);
+		transition: box-shadow 0.2s ease;
+	}
+
+	.topic-cloud:hover {
+		box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
 	}
 
 	.cloud-title {

@@ -67,7 +67,9 @@
 <style>
 	.topic-card {
 		display: block;
-		background: var(--color-bg-card);
+		background: rgba(18, 18, 26, 0.8);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
 		padding: var(--spacing-lg);
@@ -78,8 +80,7 @@
 
 	.topic-card:hover {
 		border-color: var(--color-border-hover);
-		background: var(--color-bg-card-hover);
-		box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+		box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
 		transform: translateY(-2px);
 	}
 

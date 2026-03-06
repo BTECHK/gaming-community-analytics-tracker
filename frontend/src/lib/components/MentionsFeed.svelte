@@ -76,10 +76,17 @@
 
 <style>
 	.mentions-feed {
-		background: var(--color-bg-card);
+		background: rgba(18, 18, 26, 0.8);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
 		overflow: hidden;
+		transition: box-shadow 0.2s ease;
+	}
+
+	.mentions-feed:hover {
+		box-shadow: 0 0 30px rgba(139, 92, 246, 0.15);
 	}
 
 	.feed-title {

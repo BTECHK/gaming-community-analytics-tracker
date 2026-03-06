@@ -328,6 +328,10 @@
 	.skeleton-card {
 		height: 200px;
 		border-radius: var(--radius-lg);
+		background: rgba(18, 18, 26, 0.8);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border: 1px solid var(--color-border);
 	}
 
 	.error-state {
