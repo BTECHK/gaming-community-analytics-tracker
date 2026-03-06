@@ -18,6 +18,9 @@ from app.ingestion.adapters import (
     TierSiteAdapter,
     GoogleTrendsAdapter,
     GuideSiteAdapter,
+    NewsSourceAAdapter,
+    NewsSourceBAdapter,
+    RedditAdapter,
 )
 from app.ingestion.service import IngestionService
 from app.nlp import NLPService
@@ -213,6 +216,93 @@ async def guidesite_ingestion_job() -> None:
             await adapter.close()
         except Exception as e:
             logger.error("GuideSite ingestion job failed: %s", e)
+        finally:
+            await session.close()
+
+
+async def newssource_a_ingestion_job() -> None:
+    """Scheduled job to ingest NewsSourceA the game articles."""
+    logger.info("Starting scheduled NewsSourceA ingestion")
+
+    engine = get_engine()
+    session_factory = get_session_factory(engine)
+
+    async with session_factory() as session:
+        try:
+            adapter = NewsSourceAAdapter()
+            service = IngestionService(session)
+            service.register_adapter(adapter)
+
+            settings = get_settings()
+            result = await service.ingest_from("news-source-a", limit=settings.newssource_a_fetch_limit)
+
+            logger.info(
+                "NewsSourceA ingestion complete: fetched=%d, upserted=%d",
+                result.get("fetched", 0),
+                result.get("upserted", 0),
+            )
+
+            await adapter.close()
+        except Exception as e:
+            logger.error("NewsSourceA ingestion job failed: %s", e)
+        finally:
+            await session.close()
+
+
+async def newssource_b_ingestion_job() -> None:
+    """Scheduled job to ingest News Source B the game articles."""
+    logger.info("Starting scheduled News Source B ingestion")
+
+    engine = get_engine()
+    session_factory = get_session_factory(engine)
+
+    async with session_factory() as session:
+        try:
+            adapter = NewsSourceBAdapter()
+            service = IngestionService(session)
+            service.register_adapter(adapter)
+
+            settings = get_settings()
+            result = await service.ingest_from("news-source-b", limit=settings.newssource_b_fetch_limit)
+
+            logger.info(
+                "News Source B ingestion complete: fetched=%d, upserted=%d",
+                result.get("fetched", 0),
+                result.get("upserted", 0),
+            )
+
+            await adapter.close()
+        except Exception as e:
+            logger.error("News Source B ingestion job failed: %s", e)
+        finally:
+            await session.close()
+
+
+async def reddit_ingestion_job() -> None:
+    """Scheduled job to ingest Reddit posts from configured subreddits."""
+    logger.info("Starting scheduled Reddit ingestion")
+
+    engine = get_engine()
+    session_factory = get_session_factory(engine)
+
+    async with session_factory() as session:
+        try:
+            adapter = RedditAdapter()
+            service = IngestionService(session)
+            service.register_adapter(adapter)
+
+            settings = get_settings()
+            result = await service.ingest_from("reddit", limit=settings.reddit_fetch_limit)
+
+            logger.info(
+                "Reddit ingestion complete: fetched=%d, upserted=%d",
+                result.get("fetched", 0),
+                result.get("upserted", 0),
+            )
+
+            await adapter.close()
+        except Exception as e:
+            logger.error("Reddit ingestion job failed: %s", e)
         finally:
             await session.close()
 
@@ -428,6 +518,39 @@ def configure_scheduler(sched: AsyncIOScheduler) -> None:
         replace_existing=True,
     )
     logger.info("Scheduled GuideSite ingestion job (every 6 hours)")
+
+    # NewsSourceA job (RSS, always enabled)
+    sched.add_job(
+        newssource_a_ingestion_job,
+        "interval",
+        hours=6,
+        id="news-source-a_ingestion",
+        name="NewsSourceA Article Ingestion",
+        replace_existing=True,
+    )
+    logger.info("Scheduled NewsSourceA ingestion job (every 6 hours)")
+
+    # News Source B job (RSS, always enabled)
+    sched.add_job(
+        newssource_b_ingestion_job,
+        "interval",
+        hours=6,
+        id="news-source-b_ingestion",
+        name="News Source B Article Ingestion",
+        replace_existing=True,
+    )
+    logger.info("Scheduled News Source B ingestion job (every 6 hours)")
+
+    # Reddit job (always enabled - public JSON/RSS)
+    sched.add_job(
+        reddit_ingestion_job,
+        "interval",
+        hours=6,
+        id="reddit_ingestion",
+        name="Reddit Post Ingestion",
+        replace_existing=True,
+    )
+    logger.info("Scheduled Reddit ingestion job (every 6 hours)")
 
     # Sentiment analysis job (configurable, runs with offset after ingestion)
     if settings.nlp_enabled:

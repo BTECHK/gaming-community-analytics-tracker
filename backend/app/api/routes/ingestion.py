@@ -17,6 +17,9 @@ from app.ingestion.adapters import (
     TierSiteAdapter,
     GoogleTrendsAdapter,
     GuideSiteAdapter,
+    NewsSourceAAdapter,
+    NewsSourceBAdapter,
+    RedditAdapter,
 )
 from app.ingestion.service import IngestionService
 from app.nlp import NLPService
@@ -67,7 +70,7 @@ class AllSourcesStatus(BaseModel):
     sources: dict[str, SourceStatus]
 
 
-SUPPORTED_PLATFORMS = {"youtube", "official-news", "tier-site", "google_trends", "guide-site"}
+SUPPORTED_PLATFORMS = {"youtube", "official-news", "tier-site", "google_trends", "guide-site", "news-source-a", "news-source-b", "reddit"}
 
 
 def _get_adapter(platform: str):
@@ -82,6 +85,12 @@ def _get_adapter(platform: str):
         return GoogleTrendsAdapter()
     if platform == "guide-site":
         return GuideSiteAdapter()
+    if platform == "news-source-a":
+        return NewsSourceAAdapter()
+    if platform == "news-source-b":
+        return NewsSourceBAdapter()
+    if platform == "reddit":
+        return RedditAdapter()
     raise ValueError(f"Unsupported platform: {platform}")
 
 
@@ -317,6 +326,78 @@ async def trigger_guidesite_ingestion(session: SessionDep) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/ingestion/news-source-a")
+async def trigger_newssource_a_ingestion(session: SessionDep) -> dict:
+    """Manually trigger NewsSourceA the game article ingestion."""
+    settings = get_settings()
+
+    adapter = NewsSourceAAdapter()
+    service = IngestionService(session)
+    service.register_adapter(adapter)
+
+    try:
+        result = await service.ingest_from("news-source-a", limit=settings.newssource_a_fetch_limit)
+        await adapter.close()
+        return {
+            "source": "news-source-a",
+            "status": "complete",
+            "fetched": result.get("fetched", 0),
+            "upserted": result.get("upserted", 0),
+        }
+    except Exception as e:
+        logger.error("Manual NewsSourceA ingestion failed: %s", e)
+        await adapter.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ingestion/news-source-b")
+async def trigger_newssource_b_ingestion(session: SessionDep) -> dict:
+    """Manually trigger News Source B the game article ingestion."""
+    settings = get_settings()
+
+    adapter = NewsSourceBAdapter()
+    service = IngestionService(session)
+    service.register_adapter(adapter)
+
+    try:
+        result = await service.ingest_from("news-source-b", limit=settings.newssource_b_fetch_limit)
+        await adapter.close()
+        return {
+            "source": "news-source-b",
+            "status": "complete",
+            "fetched": result.get("fetched", 0),
+            "upserted": result.get("upserted", 0),
+        }
+    except Exception as e:
+        logger.error("Manual News Source B ingestion failed: %s", e)
+        await adapter.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ingestion/reddit")
+async def trigger_reddit_ingestion(session: SessionDep) -> dict:
+    """Manually trigger Reddit post ingestion."""
+    settings = get_settings()
+
+    adapter = RedditAdapter()
+    service = IngestionService(session)
+    service.register_adapter(adapter)
+
+    try:
+        result = await service.ingest_from("reddit", limit=settings.reddit_fetch_limit)
+        await adapter.close()
+        return {
+            "source": "reddit",
+            "status": "complete",
+            "fetched": result.get("fetched", 0),
+            "upserted": result.get("upserted", 0),
+        }
+    except Exception as e:
+        logger.error("Manual Reddit ingestion failed: %s", e)
+        await adapter.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # =============================================================================
 # Status endpoints
 # =============================================================================
@@ -347,6 +428,15 @@ async def get_ingestion_status() -> AllSourcesStatus:
                 keywords=len(settings.google_trends_keywords_list),
             ),
             "guide-site": SourceStatus(
+                enabled=True,
+            ),
+            "news-source-a": SourceStatus(
+                enabled=True,
+            ),
+            "news-source-b": SourceStatus(
+                enabled=True,
+            ),
+            "reddit": SourceStatus(
                 enabled=True,
             ),
         }
