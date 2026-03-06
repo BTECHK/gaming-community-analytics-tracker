@@ -2,6 +2,7 @@
 	import type { Topic } from '$lib/types';
 	import SentimentBar from './SentimentBar.svelte';
 	import ConfidenceIndicator from './ConfidenceIndicator.svelte';
+	import VelocityBadge from './VelocityBadge.svelte';
 
 	interface Props {
 		topic: Topic;
@@ -25,6 +26,7 @@
 		<div class="card-meta">
 			<ConfidenceIndicator confidence={topic.confidence} showLabel={false} compact={true} />
 			<span class="post-count">{topic.post_count} posts</span>
+			<VelocityBadge velocityLabel={topic.velocity_label ?? null} velocityPct={topic.velocity_pct ?? 0} />
 		</div>
 	</div>
 

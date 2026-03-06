@@ -71,6 +71,8 @@ export interface Topic {
 	summary: string | null;
 	sentiment_explanation: SentimentExplanation | null;
 	confidence_breakdown: ConfidenceBreakdown | null;
+	velocity_label?: 'rising' | 'steady' | 'cooling' | null;
+	velocity_pct?: number;
 }
 
 /** Minimal topic info for navigation */
