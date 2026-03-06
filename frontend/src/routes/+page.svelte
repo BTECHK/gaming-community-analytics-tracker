@@ -3,13 +3,14 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import api from '$lib/api';
-	import type { Topic, TopicNavItem, FilterState, Quote } from '$lib/types';
+	import type { Topic, TopicNavItem, FilterState, Quote, StatsResponse } from '$lib/types';
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import FreshnessIndicator from '$lib/components/FreshnessIndicator.svelte';
 	import TopicCard from '$lib/components/TopicCard.svelte';
 	import MentionsFeed from '$lib/components/MentionsFeed.svelte';
 	import TopicCloud from '$lib/components/TopicCloud.svelte';
 	import SourcesCard from '$lib/components/SourcesCard.svelte';
+	import StatsBanner from '$lib/components/StatsBanner.svelte';
 	import FollowButton from '$lib/components/FollowButton.svelte';
 	import LazyLoad from '$lib/components/LazyLoad.svelte';
 
@@ -18,6 +19,7 @@
 	let allTopics: TopicNavItem[] = $state([]);
 	let sources: Record<string, number> = $state({});
 	let sourcePercentages: Record<string, number> = $state({});
+	let stats: StatsResponse | null = $state(null);
 	let lastUpdated = $state<string | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -76,14 +78,15 @@
 		error = null;
 
 		try {
-			const [trendingRes, topicsRes, sourcesRes] = await Promise.all([
+			const [trendingRes, topicsRes, sourcesRes, statsRes] = await Promise.all([
 				api.getTrending({
 					themes: filters.themes.length > 0 ? filters.themes : undefined,
 					platforms: filters.platforms.length > 0 ? filters.platforms : undefined,
 					periodDays: parseInt(filters.dateRange)
 				}),
 				api.getTopics(),
-				api.getSources()
+				api.getSources(),
+				api.getStats()
 			]);
 
 			topics = trendingRes.topics;
@@ -91,6 +94,7 @@
 			allTopics = topicsRes.topics;
 			sources = sourcesRes.sources;
 			sourcePercentages = sourcesRes.percentages;
+			stats = statsRes;
 		} catch (e) {
 			console.error('Failed to load dashboard data:', e);
 			error = e instanceof Error ? e.message : 'Failed to load data';
@@ -118,6 +122,9 @@
 </svelte:head>
 
 <div class="dashboard">
+	{#if stats}
+		<StatsBanner {stats} />
+	{/if}
 	<FilterBar {filters} onFiltersChange={handleFiltersChange} />
 	<FreshnessIndicator {lastUpdated} />
 

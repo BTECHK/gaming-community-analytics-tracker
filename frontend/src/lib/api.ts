@@ -7,6 +7,7 @@ import type {
 	TopicsListResponse,
 	Topic,
 	SourcesResponse,
+	StatsResponse,
 	AggregateResponse,
 	PatchPulseResponse,
 	VoteRequest,
@@ -143,6 +144,19 @@ export const api = {
 		if (cached) return cached;
 
 		const data = await fetchApi<SourcesResponse>('/dashboard/sources');
+		setCache(cacheKey, data);
+		return data;
+	},
+
+	/**
+	 * Get stats summary for dashboard banner
+	 */
+	async getStats(): Promise<StatsResponse> {
+		const cacheKey = 'stats';
+		const cached = getCached<StatsResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<StatsResponse>('/dashboard/stats');
 		setCache(cacheKey, data);
 		return data;
 	},

@@ -118,6 +118,15 @@ export interface AggregateResponse {
 	};
 }
 
+/** Stats summary response */
+export interface StatsResponse {
+	posts_analyzed: number;
+	active_topics: number;
+	sources_active: number;
+	pulse_score: number;
+	pulse_label: string;
+}
+
 /** Active filters state */
 export interface FilterState {
 	themes: string[];
