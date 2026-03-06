@@ -8,6 +8,8 @@ import type {
 	Topic,
 	SourcesResponse,
 	StatsResponse,
+	SentimentHistoryResponse,
+	ActivityResponse,
 	AggregateResponse,
 	PatchPulseResponse,
 	VoteRequest,
@@ -157,6 +159,39 @@ export const api = {
 		if (cached) return cached;
 
 		const data = await fetchApi<StatsResponse>('/dashboard/stats');
+		setCache(cacheKey, data);
+		return data;
+	},
+
+	/**
+	 * Get sentiment history time series
+	 */
+	async getSentimentHistory(options?: { periodDays?: number; granularity?: string }): Promise<SentimentHistoryResponse> {
+		const endpoint = buildUrl('/dashboard/sentiment-history', {
+			period_days: options?.periodDays,
+			granularity: options?.granularity
+		});
+		const cacheKey = `sentiment-history:${endpoint}`;
+		const cached = getCached<SentimentHistoryResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<SentimentHistoryResponse>(endpoint);
+		setCache(cacheKey, data);
+		return data;
+	},
+
+	/**
+	 * Get activity patterns for heatmap
+	 */
+	async getActivity(options?: { periodDays?: number }): Promise<ActivityResponse> {
+		const endpoint = buildUrl('/dashboard/activity', {
+			period_days: options?.periodDays
+		});
+		const cacheKey = `activity:${endpoint}`;
+		const cached = getCached<ActivityResponse>(cacheKey);
+		if (cached) return cached;
+
+		const data = await fetchApi<ActivityResponse>(endpoint);
 		setCache(cacheKey, data);
 		return data;
 	},

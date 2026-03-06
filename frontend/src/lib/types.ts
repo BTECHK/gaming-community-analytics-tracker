@@ -127,6 +127,28 @@ export interface StatsResponse {
 	pulse_label: string;
 }
 
+/** Sentiment history entry */
+export interface SentimentHistoryEntry {
+	date: string;
+	positive: number;
+	neutral: number;
+	negative: number;
+	post_count: number;
+}
+
+/** Sentiment history response */
+export interface SentimentHistoryResponse {
+	history: SentimentHistoryEntry[];
+	period_days: number;
+	granularity: string;
+}
+
+/** Activity patterns response */
+export interface ActivityResponse {
+	heatmap: number[][];
+	total_posts: number;
+}
+
 /** Active filters state */
 export interface FilterState {
 	themes: string[];
