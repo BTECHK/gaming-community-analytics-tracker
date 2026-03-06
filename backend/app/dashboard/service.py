@@ -271,7 +271,19 @@ class AggregationService:
             max_updated = max(agg.updated_at for agg in aggregations)
             last_updated = max_updated.isoformat() if max_updated else None
 
-        return [self._aggregation_to_dict(agg) for agg in aggregations], last_updated
+        # Build topic dicts with velocity data
+        topics = []
+        for agg in aggregations:
+            topic_dict = self._aggregation_to_dict(agg)
+            try:
+                velocity = await self.get_topic_velocity(agg.topic_slug, period_days)
+            except Exception:
+                velocity = {"velocity_label": None, "velocity_pct": 0.0}
+            topic_dict["velocity_label"] = velocity["velocity_label"]
+            topic_dict["velocity_pct"] = velocity["velocity_pct"]
+            topics.append(topic_dict)
+
+        return topics, last_updated
 
     async def get_topic_by_slug(self, slug: str) -> dict | None:
         """Get a single topic by slug.
