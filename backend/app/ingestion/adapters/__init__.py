@@ -11,6 +11,9 @@ from app.ingestion.adapters.official_news import RiotAdapter
 from app.ingestion.adapters.tiersite import TierSiteAdapter
 from app.ingestion.adapters.google_trends import GoogleTrendsAdapter
 from app.ingestion.adapters.guidesite import GuideSiteAdapter
+from app.ingestion.adapters.newssource_a import NewsSourceAAdapter
+from app.ingestion.adapters.newssource_b import NewsSourceBAdapter
+from app.ingestion.adapters.reddit import RedditAdapter
 
 __all__ = [
     "DataSourceAdapter",
@@ -23,4 +26,7 @@ __all__ = [
     "TierSiteAdapter",
     "GoogleTrendsAdapter",
     "GuideSiteAdapter",
+    "NewsSourceAAdapter",
+    "NewsSourceBAdapter",
+    "RedditAdapter",
 ]

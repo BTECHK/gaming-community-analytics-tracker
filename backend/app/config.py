@@ -43,6 +43,18 @@ class Settings(BaseSettings):
     # GuideSite Scraping
     guidesite_fetch_limit: int = 50  # Max guides per fetch
 
+    # NewsSourceA RSS
+    newssource_a_feed_url: str = "https://www.news-source-a.com/game-news/feed/"
+    newssource_a_fetch_limit: int = 30
+
+    # News Source B RSS
+    newssource_b_feed_url: str = "https://news-source-b.com/game-news/feed"
+    newssource_b_fetch_limit: int = 30
+
+    # Reddit (public JSON API, no auth needed)
+    reddit_subreddits: str = "gamecommunity"
+    reddit_fetch_limit: int = 50
+
     # NLP Pipeline
     nlp_batch_size: int = 32
     nlp_chunk_size: int = 1000
@@ -79,6 +91,13 @@ class Settings(BaseSettings):
         if not self.youtube_search_queries:
             return []
         return [x.strip() for x in self.youtube_search_queries.split(",") if x.strip()]
+
+    @property
+    def reddit_subreddits_list(self) -> list[str]:
+        """Parse comma-separated subreddit names into list."""
+        if not self.reddit_subreddits:
+            return ["gamecommunity"]
+        return [x.strip() for x in self.reddit_subreddits.split(",") if x.strip()]
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
