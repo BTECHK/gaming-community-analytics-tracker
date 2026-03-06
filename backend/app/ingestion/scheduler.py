@@ -1,8 +1,9 @@
 """APScheduler configuration for periodic ingestion jobs."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from uuid import UUID
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -26,8 +27,30 @@ from app.models import Post
 
 logger = logging.getLogger(__name__)
 
-# Global scheduler instance
-scheduler = AsyncIOScheduler()
+# Global scheduler instance - initialized lazily to ensure event loop exists
+_scheduler: Optional[AsyncIOScheduler] = None
+
+
+def get_scheduler() -> AsyncIOScheduler:
+    """Get or create the scheduler instance.
+
+    Creates the scheduler lazily to ensure the event loop exists when
+    the scheduler is instantiated. This prevents issues with APScheduler
+    trying to get an event loop that doesn't exist yet.
+    """
+    global _scheduler
+    if _scheduler is None:
+        # Get the current event loop to pass to the scheduler
+        try:
+            loop = asyncio.get_running_loop()
+            _scheduler = AsyncIOScheduler(event_loop=loop)
+            logger.debug("Created AsyncIOScheduler with event loop")
+        except RuntimeError:
+            # No running loop, create scheduler without explicit loop
+            # (APScheduler will get the loop when start() is called)
+            _scheduler = AsyncIOScheduler()
+            logger.debug("Created AsyncIOScheduler without explicit event loop")
+    return _scheduler
 
 
 async def youtube_ingestion_job() -> None:
@@ -337,13 +360,17 @@ async def dlq_retry_job() -> None:
         logger.error("DLQ retry job failed: %s", e)
 
 
-def configure_scheduler() -> None:
-    """Configure scheduler with ingestion jobs."""
+def configure_scheduler(sched: AsyncIOScheduler) -> None:
+    """Configure scheduler with ingestion jobs.
+
+    Args:
+        sched: The scheduler instance to configure with jobs.
+    """
     settings = get_settings()
 
     # YouTube job (only if API key is configured)
     if settings.youtube_api_key:
-        scheduler.add_job(
+        sched.add_job(
             youtube_ingestion_job,
             "interval",
             hours=6,
@@ -356,7 +383,7 @@ def configure_scheduler() -> None:
         logger.info("YouTube API key not configured, skipping job registration")
 
     # OfficialNews job (always enabled - no API key needed)
-    scheduler.add_job(
+    sched.add_job(
         riot_ingestion_job,
         "interval",
         hours=6,
@@ -367,7 +394,7 @@ def configure_scheduler() -> None:
     logger.info("Scheduled OfficialNews ingestion job (every 6 hours)")
 
     # TierSite job (always enabled)
-    scheduler.add_job(
+    sched.add_job(
         tiersite_ingestion_job,
         "interval",
         hours=6,
@@ -379,7 +406,7 @@ def configure_scheduler() -> None:
 
     # Google Trends job (configurable)
     if settings.google_trends_enabled:
-        scheduler.add_job(
+        sched.add_job(
             google_trends_ingestion_job,
             "interval",
             hours=12,  # Less frequent due to rate limits
@@ -392,7 +419,7 @@ def configure_scheduler() -> None:
         logger.info("Google Trends disabled, skipping job registration")
 
     # GuideSite job (always enabled)
-    scheduler.add_job(
+    sched.add_job(
         guidesite_ingestion_job,
         "interval",
         hours=6,
@@ -404,7 +431,7 @@ def configure_scheduler() -> None:
 
     # Sentiment analysis job (configurable, runs with offset after ingestion)
     if settings.nlp_enabled:
-        scheduler.add_job(
+        sched.add_job(
             sentiment_analysis_job,
             "interval",
             hours=6,
@@ -416,7 +443,7 @@ def configure_scheduler() -> None:
         logger.info("Scheduled sentiment analysis job (every 6 hours + 30min offset)")
 
         # Aggregation job (runs after sentiment analysis)
-        scheduler.add_job(
+        sched.add_job(
             aggregation_job,
             "interval",
             hours=6,
@@ -428,7 +455,7 @@ def configure_scheduler() -> None:
         logger.info("Scheduled topic aggregation job (every 6 hours + 45min offset)")
 
         # DLQ retry job (retries failed posts from dead letter queue)
-        scheduler.add_job(
+        sched.add_job(
             dlq_retry_job,
             "interval",
             hours=settings.nlp_dlq_retry_interval_hours,
@@ -446,12 +473,37 @@ def configure_scheduler() -> None:
 
 @asynccontextmanager
 async def scheduler_lifespan() -> AsyncIterator[None]:
-    """Async context manager for scheduler lifecycle."""
-    configure_scheduler()
-    scheduler.start()
-    logger.info("Scheduler started")
+    """Async context manager for scheduler lifecycle.
+
+    Creates and starts the APScheduler with proper event loop integration.
+    Handles exceptions during startup to prevent silent failures.
+    """
+    sched = get_scheduler()
+
+    try:
+        # Configure jobs before starting
+        configure_scheduler(sched)
+        logger.info("Scheduler configured with %d jobs", len(sched.get_jobs()))
+
+        # Start the scheduler
+        sched.start()
+
+        # Verify scheduler is actually running
+        if sched.running:
+            logger.info("Scheduler started successfully (running=True)")
+        else:
+            logger.error("Scheduler.start() called but scheduler.running is False")
+            raise RuntimeError("Scheduler failed to start - running state is False")
+
+    except Exception as e:
+        logger.exception("Failed to start scheduler: %s", e)
+        raise
+
     try:
         yield
     finally:
-        scheduler.shutdown(wait=False)
-        logger.info("Scheduler stopped")
+        try:
+            sched.shutdown(wait=False)
+            logger.info("Scheduler stopped")
+        except Exception as e:
+            logger.warning("Error shutting down scheduler: %s", e)
