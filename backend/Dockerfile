@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy all files (need package structure for hatchling)
 COPY . .
 
-# Install package in development mode
-RUN pip install --no-cache-dir -e .
+# Install package with dev dependencies (includes pytest)
+RUN pip install --no-cache-dir -e ".[dev]"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

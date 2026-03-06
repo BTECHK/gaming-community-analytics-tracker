@@ -1,5 +1,6 @@
 """CommunityPulse API - FastAPI application factory."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,7 +10,17 @@ from app.config import get_settings
 from app.middleware.security import SecurityHeadersMiddleware
 from app.api.routes import health, ingestion, dashboard, feedback, nlp
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+async def check_optional_apis():
+    """Check for optional API keys and log warnings if not set."""
+    if not settings.gemini_api_key:
+        logger.warning(
+            "GEMINI_API_KEY not set - using fallback topic naming. "
+            "Set GEMINI_API_KEY for AI-powered features."
+        )
 
 
 @asynccontextmanager
@@ -17,6 +28,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     from app.ingestion.scheduler import scheduler_lifespan
 
+    await check_optional_apis()
     async with scheduler_lifespan():
         yield
 
