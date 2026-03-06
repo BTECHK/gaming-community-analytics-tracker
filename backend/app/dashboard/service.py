@@ -313,6 +313,62 @@ class AggregationService:
             for agg in aggregations
         ]
 
+    async def get_topic_velocity(
+        self, topic_slug: str, period_days: int = 7
+    ) -> dict:
+        """Calculate topic velocity by comparing current vs previous period.
+
+        Args:
+            topic_slug: Slug of the topic to check.
+            period_days: Length of each comparison window in days.
+
+        Returns:
+            Dict with velocity_label ('rising'|'steady'|'cooling'|None) and velocity_pct (float).
+        """
+        now = datetime.now(timezone.utc)
+        current_start = now - timedelta(days=period_days)
+        previous_start = current_start - timedelta(days=period_days)
+
+        # Get current aggregation post_count
+        agg_stmt = select(Aggregation).where(Aggregation.topic_slug == topic_slug)
+        agg_result = await self.session.execute(agg_stmt)
+        aggregation = agg_result.scalar_one_or_none()
+
+        if not aggregation:
+            return {"velocity_label": None, "velocity_pct": 0.0}
+
+        current_count = aggregation.post_count
+
+        # Count posts in previous period that mention this topic
+        prev_stmt = (
+            select(func.count(Post.id))
+            .join(SentimentResult, SentimentResult.post_id == Post.id)
+            .where(
+                and_(
+                    Post.created_at >= previous_start,
+                    Post.created_at < current_start,
+                )
+            )
+        )
+        prev_result = await self.session.execute(prev_stmt)
+        previous_count = prev_result.scalar() or 0
+
+        if previous_count == 0:
+            if current_count > 0:
+                return {"velocity_label": "rising", "velocity_pct": 100.0}
+            return {"velocity_label": None, "velocity_pct": 0.0}
+
+        pct_change = ((current_count - previous_count) / previous_count) * 100
+
+        if pct_change > 20:
+            label = "rising"
+        elif pct_change < -20:
+            label = "cooling"
+        else:
+            label = "steady"
+
+        return {"velocity_label": label, "velocity_pct": round(pct_change, 1)}
+
     async def get_source_distribution(self) -> dict[str, int]:
         """Get overall source distribution across all posts.
 
