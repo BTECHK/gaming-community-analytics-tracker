@@ -219,7 +219,7 @@ class AggregationService:
         platforms: list[str] | None = None,
         period_days: int = 7,
         limit: int = 10,
-    ) -> list[dict]:
+    ) -> tuple[list[dict], str | None]:
         """Get trending topics with sentiment data.
 
         Args:
@@ -229,7 +229,7 @@ class AggregationService:
             limit: Maximum topics to return.
 
         Returns:
-            List of topic data dicts.
+            Tuple of (topic data dicts, last_updated ISO string or None).
         """
         cutoff = datetime.now(timezone.utc) - timedelta(days=period_days)
         stmt = (
@@ -265,7 +265,13 @@ class AggregationService:
                 )
             ][:limit]
 
-        return [self._aggregation_to_dict(agg) for agg in aggregations]
+        # Compute last_updated as max updated_at across returned aggregations
+        last_updated: str | None = None
+        if aggregations:
+            max_updated = max(agg.updated_at for agg in aggregations)
+            last_updated = max_updated.isoformat() if max_updated else None
+
+        return [self._aggregation_to_dict(agg) for agg in aggregations], last_updated
 
     async def get_topic_by_slug(self, slug: str) -> dict | None:
         """Get a single topic by slug.

@@ -76,13 +76,14 @@ async def get_trending(
         Dict containing list of trending topics.
     """
     service = AggregationService(db)
-    topics = await service.get_trending(
+    topics, last_updated = await service.get_trending(
         themes=theme, platforms=platform, period_days=period_days, limit=limit,
     )
 
     return {
         "topics": topics,
         "count": len(topics),
+        "last_updated": last_updated,
         "filters": {
             "themes": theme,
             "platforms": platform,

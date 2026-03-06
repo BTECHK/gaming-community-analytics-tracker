@@ -84,6 +84,7 @@ export interface TopicNavItem {
 export interface TrendingResponse {
 	topics: Topic[];
 	count: number;
+	last_updated: string | null;
 	filters: {
 		themes: string[] | null;
 		platforms: string[] | null;
