@@ -221,7 +221,7 @@ async def guidesite_ingestion_job() -> None:
 
 
 async def newssource_a_ingestion_job() -> None:
-    """Scheduled job to ingest NewsSourceA the game articles."""
+    """Scheduled job to ingest NewsSourceA articles."""
     logger.info("Starting scheduled NewsSourceA ingestion")
 
     engine = get_engine()
@@ -250,7 +250,7 @@ async def newssource_a_ingestion_job() -> None:
 
 
 async def newssource_b_ingestion_job() -> None:
-    """Scheduled job to ingest News Source B the game articles."""
+    """Scheduled job to ingest News Source B articles."""
     logger.info("Starting scheduled News Source B ingestion")
 
     engine = get_engine()
@@ -478,7 +478,7 @@ def configure_scheduler(sched: AsyncIOScheduler) -> None:
         "interval",
         hours=6,
         id="riot_ingestion",
-        name="OfficialNews News Ingestion",
+        name="Official News Ingestion",
         replace_existing=True,
     )
     logger.info("Scheduled OfficialNews ingestion job (every 6 hours)")

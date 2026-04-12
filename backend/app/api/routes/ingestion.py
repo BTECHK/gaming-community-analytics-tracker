@@ -328,7 +328,7 @@ async def trigger_guidesite_ingestion(session: SessionDep) -> dict:
 
 @router.post("/ingestion/news-source-a")
 async def trigger_newssource_a_ingestion(session: SessionDep) -> dict:
-    """Manually trigger NewsSourceA the game article ingestion."""
+    """Manually trigger NewsSourceA article ingestion."""
     settings = get_settings()
 
     adapter = NewsSourceAAdapter()
@@ -352,7 +352,7 @@ async def trigger_newssource_a_ingestion(session: SessionDep) -> dict:
 
 @router.post("/ingestion/news-source-b")
 async def trigger_newssource_b_ingestion(session: SessionDep) -> dict:
-    """Manually trigger News Source B the game article ingestion."""
+    """Manually trigger News Source B article ingestion."""
     settings = get_settings()
 
     adapter = NewsSourceBAdapter()

@@ -1,4 +1,4 @@
-"""Patch service for detecting current the game patch version from Data Dragon."""
+"""Patch service for detecting current game patch version from Data Dragon."""
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -19,13 +19,13 @@ _cache_ttl = timedelta(hours=1)
 
 
 class PatchService:
-    """Service for fetching current the game patch version from Data Dragon.
+    """Service for fetching current game patch version from Data Dragon.
 
     Caches the patch version for 1 hour to avoid excessive API calls.
     """
 
     async def get_current_patch(self) -> str:
-        """Get the current the game patch version.
+        """Get the current game patch version.
 
         Fetches from Data Dragon API and extracts major.minor version.
         Results are cached for 1 hour.

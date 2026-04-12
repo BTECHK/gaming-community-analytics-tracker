@@ -89,7 +89,7 @@
 	</nav>
 
 	<div class="sidebar-footer">
-		<div class="footer-text">the game Sentiment Tracker</div>
+		<div class="footer-text">Gaming Sentiment Tracker</div>
 	</div>
 </aside>
 

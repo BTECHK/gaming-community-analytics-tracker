@@ -26,7 +26,7 @@ from app.dashboard.service import AggregationService
 # ---------------------------------------------------------------------------
 
 def _make_post(
-    title: str = "the game discussion",
+    title: str = "Game balance discussion",
     content: str = "Great changes in the latest patch",
     platform: Platform = Platform.REDDIT,
 ) -> Post:

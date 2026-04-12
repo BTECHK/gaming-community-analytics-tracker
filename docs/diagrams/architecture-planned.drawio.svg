@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     version="1.1" width="1200px" height="920px" viewBox="0 0 1200 920"
+     content="&lt;mxfile host=&quot;app.diagrams.net&quot; modified=&quot;2026-04-11T00:00:00.000Z&quot; agent=&quot;Claude&quot; version=&quot;26.0.0&quot; type=&quot;device&quot;&gt;&lt;diagram id=&quot;arch-planned&quot; name=&quot;Planned Architecture&quot;&gt;&lt;mxGraphModel dx=&quot;0&quot; dy=&quot;0&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; guides=&quot;1&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; page=&quot;1&quot; pageScale=&quot;1&quot; pageWidth=&quot;1200&quot; pageHeight=&quot;920&quot;&gt;&lt;root&gt;&lt;mxCell id=&quot;0&quot;/&gt;&lt;mxCell id=&quot;1&quot; parent=&quot;0&quot;/&gt;&lt;mxCell id=&quot;user&quot; value=&quot;User&quot; style=&quot;shape=umlActor;fillColor=#438DD5;fontColor=#FFFFFF;strokeColor=#3A7BBD;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;540&quot; y=&quot;20&quot; width=&quot;40&quot; height=&quot;60&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;&lt;mxCell id=&quot;boundary&quot; value=&quot;CommunityPulse v2&quot; style=&quot;rounded=1;dashed=1;fillColor=none;strokeColor=#888888;fontColor=#888888;fontSize=14;fontStyle=1;verticalAlign=top;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;40&quot; y=&quot;150&quot; width=&quot;920&quot; height=&quot;600&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;&lt;/diagram&gt;&lt;/mxfile&gt;">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#707070"/>
+    </marker>
+  </defs>
+  <g>
+    <!-- Title -->
+    <text x="600" y="18" font-family="Helvetica" font-size="16" font-weight="bold" fill="#333333" text-anchor="middle">CommunityPulse v2 — Planned Architecture</text>
+
+    <!-- User (UML Actor) -->
+    <circle cx="560" cy="52" r="12" fill="#438DD5" stroke="#3A7BBD" stroke-width="2"/>
+    <line x1="560" y1="64" x2="560" y2="95" stroke="#3A7BBD" stroke-width="2"/>
+    <line x1="540" y1="76" x2="580" y2="76" stroke="#3A7BBD" stroke-width="2"/>
+    <line x1="560" y1="95" x2="543" y2="115" stroke="#3A7BBD" stroke-width="2"/>
+    <line x1="560" y1="95" x2="577" y2="115" stroke="#3A7BBD" stroke-width="2"/>
+    <text x="560" y="132" font-family="Helvetica" font-size="12" fill="#438DD5" text-anchor="middle" font-weight="bold">User</text>
+
+    <!-- System Boundary -->
+    <rect x="40" y="155" width="920" height="620" rx="12" ry="12" fill="none" stroke="#888888" stroke-width="2" stroke-dasharray="8,4"/>
+    <text x="60" y="178" font-family="Helvetica" font-size="14" font-weight="bold" fill="#888888">CommunityPulse v2</text>
+
+    <!-- SvelteKit Frontend -->
+    <rect x="440" y="200" width="240" height="60" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="2"/>
+    <text x="560" y="224" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">SvelteKit Frontend</text>
+    <text x="560" y="242" font-family="Helvetica" font-size="11" fill="#FFFFFF" text-anchor="middle">SSR + WebSocket client</text>
+
+    <!-- API Gateway -->
+    <rect x="440" y="330" width="240" height="60" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="2"/>
+    <text x="560" y="354" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">API Gateway</text>
+    <text x="560" y="372" font-family="Helvetica" font-size="11" fill="#FFFFFF" text-anchor="middle">FastAPI + WebSocket push</text>
+
+    <!-- Message Queue -->
+    <rect x="440" y="460" width="240" height="50" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="2"/>
+    <text x="560" y="482" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Message Queue</text>
+    <text x="560" y="498" font-family="Helvetica" font-size="10" fill="#FFFFFF" text-anchor="middle">event-driven ingestion</text>
+
+    <!-- NLP Worker Pool (with scaling copies) -->
+    <!-- Shadow copies for horizontal scaling -->
+    <rect x="78" y="348" width="220" height="56" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.35"/>
+    <rect x="72" y="342" width="220" height="56" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.5"/>
+    <!-- Primary worker -->
+    <rect x="66" y="336" width="220" height="56" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="2"/>
+    <text x="176" y="358" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">NLP Worker Pool</text>
+    <text x="176" y="376" font-family="Helvetica" font-size="10" fill="#FFFFFF" text-anchor="middle">K8s HPA, horizontal scaling</text>
+
+    <!-- User Service -->
+    <rect x="720" y="200" width="220" height="60" rx="8" ry="8" fill="#1168BD" stroke="#0B4884" stroke-width="2"/>
+    <text x="830" y="224" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">User Service</text>
+    <text x="830" y="242" font-family="Helvetica" font-size="11" fill="#FFFFFF" text-anchor="middle">accounts, dashboards, alerts</text>
+
+    <!-- PostgreSQL 17 (Cylinder) -->
+    <path d="M140,590 Q140,570 270,570 Q400,570 400,590 L400,660 Q400,680 270,680 Q140,680 140,660 Z" fill="#438DD5" stroke="#3A7BBD" stroke-width="2"/>
+    <path d="M140,590 Q140,610 270,610 Q400,610 400,590" fill="none" stroke="#3A7BBD" stroke-width="1.5"/>
+    <text x="270" y="634" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">PostgreSQL 17</text>
+
+    <!-- Valkey 8 (Cylinder) -->
+    <path d="M460,590 Q460,570 570,570 Q680,570 680,590 L680,660 Q680,680 570,680 Q460,680 460,660 Z" fill="#438DD5" stroke="#3A7BBD" stroke-width="2"/>
+    <path d="M460,590 Q460,610 570,610 Q680,610 680,590" fill="none" stroke="#3A7BBD" stroke-width="1.5"/>
+    <text x="570" y="634" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Valkey 8</text>
+
+    <!-- Time-Series Store (Cylinder) -->
+    <path d="M730,590 Q730,570 840,570 Q950,570 950,590 L950,660 Q950,680 840,680 Q730,680 730,660 Z" fill="#438DD5" stroke="#3A7BBD" stroke-width="2"/>
+    <path d="M730,590 Q730,610 840,610 Q950,610 950,590" fill="none" stroke="#3A7BBD" stroke-width="1.5"/>
+    <text x="840" y="630" font-family="Helvetica" font-size="13" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Time-Series Store</text>
+    <text x="840" y="648" font-family="Helvetica" font-size="10" fill="#FFFFFF" text-anchor="middle">historical trend analysis</text>
+
+    <!-- External Systems -->
+    <rect x="1000" y="280" width="170" height="46" rx="8" ry="8" fill="#999999" stroke="#666666" stroke-width="2"/>
+    <text x="1085" y="308" font-family="Helvetica" font-size="12" font-weight="bold" fill="#FFFFFF" text-anchor="middle">YouTube API</text>
+
+    <rect x="1000" y="340" width="170" height="46" rx="8" ry="8" fill="#999999" stroke="#666666" stroke-width="2"/>
+    <text x="1085" y="368" font-family="Helvetica" font-size="12" font-weight="bold" fill="#FFFFFF" text-anchor="middle">RSS Feeds</text>
+
+    <rect x="1000" y="400" width="170" height="46" rx="8" ry="8" fill="#999999" stroke="#666666" stroke-width="2"/>
+    <text x="1085" y="428" font-family="Helvetica" font-size="12" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Google Trends</text>
+
+    <rect x="1000" y="460" width="170" height="46" rx="8" ry="8" fill="#999999" stroke="#666666" stroke-width="2"/>
+    <text x="1085" y="488" font-family="Helvetica" font-size="12" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Webhook Sources</text>
+
+    <!-- Arrows -->
+    <!-- User -> Frontend -->
+    <line x1="560" y1="132" x2="560" y2="200" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="575" y="170" font-family="Helvetica" font-size="10" fill="#999999">browses</text>
+
+    <!-- Frontend -> API Gateway -->
+    <line x1="560" y1="260" x2="560" y2="330" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="575" y="298" font-family="Helvetica" font-size="10" fill="#999999">REST / WS</text>
+
+    <!-- API Gateway -> Message Queue -->
+    <line x1="560" y1="390" x2="560" y2="460" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="575" y="430" font-family="Helvetica" font-size="10" fill="#999999">publishes</text>
+
+    <!-- Message Queue -> NLP Worker Pool -->
+    <line x1="440" y1="480" x2="250" y2="404" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="320" y="450" font-family="Helvetica" font-size="10" fill="#999999">consumes</text>
+
+    <!-- API Gateway -> NLP Worker Pool -->
+    <line x1="440" y1="355" x2="286" y2="360" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="350" y="348" font-family="Helvetica" font-size="10" fill="#999999">dispatches</text>
+
+    <!-- API Gateway -> PostgreSQL -->
+    <line x1="480" y1="390" x2="330" y2="570" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="380" y="490" font-family="Helvetica" font-size="10" fill="#999999">reads/writes</text>
+
+    <!-- API Gateway -> Valkey -->
+    <line x1="600" y1="390" x2="580" y2="570" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="600" y="485" font-family="Helvetica" font-size="10" fill="#999999">cache</text>
+
+    <!-- NLP Worker -> PostgreSQL -->
+    <line x1="176" y1="404" x2="240" y2="570" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="178" y="495" font-family="Helvetica" font-size="10" fill="#999999">stores results</text>
+
+    <!-- API Gateway -> User Service -->
+    <line x1="680" y1="340" x2="720" y2="250" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="710" y="290" font-family="Helvetica" font-size="10" fill="#999999">auth</text>
+
+    <!-- User Service -> PostgreSQL -->
+    <line x1="830" y1="260" x2="830" y2="540" stroke="#707070" stroke-width="0" />
+    <line x1="720" y1="250" x2="400" y2="620" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)" stroke-dasharray="5,3"/>
+
+    <!-- API Gateway -> Time-Series Store -->
+    <line x1="680" y1="380" x2="800" y2="570" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="750" y="490" font-family="Helvetica" font-size="10" fill="#999999">trends</text>
+
+    <!-- API Gateway -> External Sources -->
+    <line x1="680" y1="345" x2="1000" y2="303" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="840" y="312" font-family="Helvetica" font-size="10" fill="#999999">fetches</text>
+    <line x1="680" y1="360" x2="1000" y2="363" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <line x1="680" y1="375" x2="1000" y2="423" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <line x1="680" y1="385" x2="1000" y2="483" stroke="#707070" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  </g>
+</svg>

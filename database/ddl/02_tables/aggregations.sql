@@ -35,7 +35,7 @@ COMMENT ON COLUMN aggregations.post_count IS 'Number of posts in this aggregatio
 COMMENT ON COLUMN aggregations.source_mix IS 'Breakdown by platform as JSON';
 COMMENT ON COLUMN aggregations.period_start IS 'Start of aggregation time window';
 COMMENT ON COLUMN aggregations.period_end IS 'End of aggregation time window';
-COMMENT ON COLUMN aggregations.patch_version IS 'the game patch version (e.g., "14.3")';
+COMMENT ON COLUMN aggregations.patch_version IS 'Game patch version (e.g., "14.3")';
 COMMENT ON COLUMN aggregations.confidence_score IS 'Overall confidence in aggregation';
 COMMENT ON COLUMN aggregations.sentiment_explanation IS 'Detailed sentiment reasoning as JSON';
 COMMENT ON COLUMN aggregations.confidence_breakdown IS 'Per-factor confidence scores as JSON';

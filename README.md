@@ -1,20 +1,10 @@
 # CommunityPulse
 
-**gaming Community Pulse & Sentiment Dashboard**
+**Gaming Community Sentiment Dashboard**
 
-CommunityPulse aggregates sentiment and trends across multiple platforms to help gaming players and content creators understand what the community is talking about - without manually browsing Reddit, YouTube, and other platforms.
+CommunityPulse aggregates sentiment and trends across multiple platforms — YouTube, community forums, news sites, and search trends — into a single dashboard. Players and content creators see what the community is talking about without manually browsing every source.
 
----
-
-## Features
-
-- **Trending Topics** - Real-time community discussion themes with sentiment analysis
-- **Sentiment Breakdown** - Positive/neutral/negative distribution with confidence scores
-- **Cross-Platform Aggregation** - YouTube, OfficialNews, TierSite, Google Trends data sources
-- **Patch Pulse** - Current patch sentiment and highlights
-- **Personal Digest** - Follow topics and get AI-generated summaries
-- **Feedback System** - Vote and report on topic accuracy
-- **Multi-source Quotes** - Representative quotes from community discussions
+This project showcases cross-platform data ingestion, NLP-driven topic discovery, real-time sentiment tracking, and a responsive Svelte 5 frontend backed by a FastAPI async API.
 
 ---
 
@@ -22,70 +12,77 @@ CommunityPulse aggregates sentiment and trends across multiple platforms to help
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | SvelteKit 2 + Svelte 5 (with runes) |
-| Backend | FastAPI (Python 3.11+) |
-| Database | PostgreSQL 15 |
-| Cache | Valkey (Redis-compatible) |
-| NLP | BERTopic + Sentence Transformers |
-| AI Summaries | Google Gemini (optional) |
-| Container | Docker + Docker Compose |
+| Frontend | SvelteKit 2 + Svelte 5 (runes: `$state`, `$derived`, `$effect`) |
+| Backend | FastAPI (Python 3.11+), async SQLAlchemy 2, Pydantic v2 |
+| Database | PostgreSQL 17 |
+| Cache | Valkey 8 (Redis-compatible) |
+| NLP | BERTopic + Sentence Transformers + cardiffnlp RoBERTa sentiment |
+| Toxicity | Detoxify (Unitary) |
+| AI Summaries | Google Gemini 1.5 Flash (optional) |
+| Scheduling | APScheduler (async) |
+| Container | Docker Compose (6 services) |
 
 ---
 
-## Quick Start
+## Architecture
 
-### Prerequisites
+### Current State
 
-- Docker Desktop installed and running
-- Git
+![Current Architecture](docs/diagrams/architecture-current.drawio.svg)
 
-### Setup
+**6-container Docker Compose deployment:**
+- **SvelteKit frontend** — SSR + client hydration, Svelte 5 rune-based stores, CSS custom properties theming
+- **FastAPI backend** — async request handling, Pydantic validation, structured error responses
+- **NLP worker** — isolated container running BERTopic + sentiment + toxicity models (keeps API memory footprint low)
+- **PostgreSQL** — relational store for posts, sentiment results, topic aggregations, dead letter queue
+- **Valkey** — cache layer for aggregation snapshots, quota tracking, rate limiting
+- **APScheduler** — 6-hour ingestion cycles across all sources, staggered NLP + aggregation passes
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/gaming-community-analytics-tracker.git
-   cd gaming-community-analytics-tracker
-   ```
+### Planned End-State
 
-2. **Create environment file**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys (see Environment Variables below)
-   ```
+![Planned Architecture](docs/diagrams/architecture-planned.drawio.svg)
 
-3. **Start the application**
-   ```bash
-   docker compose up
-   ```
-
-4. **Seed demo data (optional)**
-   ```bash
-   docker compose exec backend python scripts/seed_demo_data.py
-   ```
-
-5. **Access the dashboard**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+**Key additions in the roadmap:**
+- WebSocket push for live topic updates (replacing polling)
+- Kubernetes deployment with horizontal pod autoscaling on the NLP worker
+- Event-driven ingestion via message queue (replacing scheduled polling)
+- User accounts with saved dashboards and alert thresholds
+- Historical trend graphs with time-series analysis
 
 ---
 
-## Environment Variables
+## Feature Spotlights
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `VALKEY_URL` | Valkey/Redis connection string | Yes |
-| `YOUTUBE_API_KEY` | YouTube Data API key | No (uses fallback) |
-| `GEMINI_API_KEY` | Google Gemini API key for AI summaries | No (uses fallback) |
+### NLP Pipeline
 
-### Example `.env`:
-```env
-DATABASE_URL=postgresql://communitypulse:communitypulse@db:5432/communitypulse
-VALKEY_URL=redis://cache:6379/0
-YOUTUBE_API_KEY=your_youtube_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
-```
+![NLP Pipeline](docs/diagrams/spotlight-nlp-pipeline.drawio.svg)
+
+The NLP pipeline processes ingested posts through three stages:
+
+1. **Topic Detection** — BERTopic clusters posts into dynamic topics using seed-guided vocabularies. Topics get human-readable names via Gemini API or a fallback dictionary.
+2. **Sentiment Analysis** — cardiffnlp/twitter-roberta-base-sentiment-latest scores each post as positive/neutral/negative with confidence. Results are stored with a configurable TTL for re-analysis.
+3. **Toxicity Filtering** — Detoxify screens posts before storage. Toxic content is flagged and excluded from aggregations.
+
+**Resilience:** A circuit breaker wraps each model call — after N failures the circuit opens, and a dead letter queue captures posts for retry on the next scheduler pass.
+
+### Multi-Source Ingestion
+
+![Ingestion Architecture](docs/diagrams/spotlight-ingestion.drawio.svg)
+
+Eight data source adapters feed the pipeline:
+
+| Source | Method | Rate Strategy |
+|--------|--------|--------------|
+| YouTube | Data API v3 | Daily quota tracking (9k/10k budget) |
+| Official News | Publisher RSS | Locale-aware, 6-hour cycle |
+| TierSite | Web scraping | Polite crawling with backoff |
+| GuideSite | Web scraping | Polite crawling with backoff |
+| News Source A | RSS feed | 30-item window per cycle |
+| News Source B | RSS feed | 30-item window per cycle |
+| Reddit | Public JSON API | No auth needed, 50-post window |
+| Google Trends | pytrends | 60s inter-request delay, 12-hour cycle |
+
+Each adapter implements a common `DataSourceAdapter` interface. The `IngestionService` handles deduplication (external ID upsert) and forwards clean posts to the NLP queue.
 
 ---
 
@@ -93,72 +90,37 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 ```
 gaming-community-analytics-tracker/
-├── backend/                     # FastAPI backend
+├── backend/
 │   ├── app/
-│   │   ├── api/routes/         # API endpoints
-│   │   ├── ingestion/adapters/ # Data source scrapers
-│   │   ├── models/             # SQLAlchemy models
-│   │   ├── nlp/                # NLP pipeline (BERTopic, sentiment)
-│   │   └── services/           # Business logic
-│   ├── scripts/                # Utility scripts
-│   └── tests/                  # Pytest tests
-├── frontend/                    # SvelteKit frontend
+│   │   ├── api/routes/            # REST endpoints (dashboard, ingestion, feedback)
+│   │   ├── dashboard/             # Aggregation, explanation generation, patch tracking
+│   │   ├── ingestion/
+│   │   │   ├── adapters/          # 8 data source adapters
+│   │   │   ├── service.py         # Dedup + upsert orchestration
+│   │   │   └── scheduler.py       # APScheduler job configuration
+│   │   ├── models/                # SQLAlchemy async models
+│   │   ├── nlp/
+│   │   │   ├── topics.py          # BERTopic seed-guided clustering
+│   │   │   ├── sentiment.py       # RoBERTa sentiment scoring
+│   │   │   ├── toxicity.py        # Detoxify toxicity detection
+│   │   │   ├── circuit_breaker.py # Failure isolation
+│   │   │   └── dead_letter.py     # Retry queue for failed analyses
+│   │   └── services/              # Digest generation, topic naming
+│   ├── scripts/                   # Seed data, migrations
+│   └── tests/                     # Pytest (async fixtures, mock NLP)
+├── frontend/
 │   ├── src/
-│   │   ├── lib/               # Components, stores, API client
-│   │   │   ├── components/    # Reusable UI components
-│   │   │   ├── stores/        # Svelte 5 rune stores
-│   │   │   └── i18n/          # Internationalization
-│   │   └── routes/            # SvelteKit pages
-│   └── e2e/                   # Playwright E2E tests
-├── docs/                        # Documentation
-├── docker-compose.yml           # Container orchestration
-└── README.md
-```
-
----
-
-## Development
-
-### Running Tests
-
-**Backend tests (requires Docker):**
-```bash
-docker compose exec backend pytest tests/ -v
-```
-
-**Frontend unit tests:**
-```bash
-cd frontend
-npm run test:run
-```
-
-**Frontend E2E tests (requires frontend running):**
-```bash
-cd frontend
-npm run test:e2e
-```
-
-### Development Commands
-
-**Start in development mode:**
-```bash
-docker compose up
-```
-
-**Rebuild containers after dependency changes:**
-```bash
-docker compose build --no-cache
-```
-
-**View logs:**
-```bash
-docker compose logs -f backend
-docker compose logs -f web
-```
-
-**Access backend shell:**
-```bash
-docker compose exec backend bash
+│   │   ├── lib/
+│   │   │   ├── components/        # TopicCard, SentimentBar, PatchPulse, etc.
+│   │   │   ├── stores/            # Svelte 5 rune stores ($state, $derived)
+│   │   │   └── i18n/              # Internationalization (English MVP)
+│   │   └── routes/                # SvelteKit pages (dashboard, digest, patch-pulse)
+│   └── e2e/                       # Playwright E2E tests
+├── database/
+│   ├── ddl/                       # Schema definitions
+│   └── dml/                       # Seed data, migrations
+├── docker-compose.yml             # 6-service orchestration
+└── docs/                          # Architecture diagrams
 ```
 
 ---
@@ -183,92 +145,57 @@ docker compose exec backend bash
 | `/api/feedback/report` | POST | Report inaccurate topic |
 | `/api/feedback/general` | POST | Submit general feedback |
 
+### Ingestion
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/ingestion/trigger` | POST | Trigger ingestion by platform |
+| `/api/ingestion/status` | GET | All source statuses |
+| `/api/ingestion/quota` | GET | YouTube API quota usage |
+| `/api/ingestion/nlp-stats` | GET | NLP processing statistics |
+| `/api/ingestion/nlp-sentiment` | POST | Trigger sentiment analysis |
+
 ### Health
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/health` | GET | Health check with DB/cache status |
 
-Full API documentation available at `http://localhost:8000/docs` when running.
-
 ---
 
-## Architecture
+## Key Technical Decisions
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│  SvelteKit      │────▶│  FastAPI        │────▶│  PostgreSQL     │
-│  Frontend       │     │  Backend        │     │  Database       │
-│                 │     │                 │     │                 │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │                 │     │                 │
-                        │  NLP Worker     │────▶│  Valkey Cache   │
-                        │  (BERTopic)     │     │                 │
-                        │                 │     │                 │
-                        └─────────────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌─────────────────┐
-                        │  Data Sources   │
-                        │  - YouTube      │
-                        │  - TierSite        │
-                        │  - the game publisher   │
-                        │  - Google Trends│
-                        └─────────────────┘
-```
-
----
-
-## Key Components
-
-### NLP Pipeline
-- **BERTopic** for dynamic topic discovery with seed topics
-- **Sentence Transformers** for embedding generation
-- **VADER** for sentiment analysis
-- **Gemini API** for human-readable topic naming (optional)
-
-### Frontend
-- **Svelte 5 runes** ($state, $derived, $effect) for reactivity
-- **svelte-persisted-state** for localStorage persistence
-- **svelte-i18n** for internationalization (English only for MVP)
-- **CSS custom properties** for theming
-
-### Backend
-- **Async SQLAlchemy** for database operations
-- **Pydantic** for request/response validation
-- **Background workers** for NLP processing
-- **Dead letter queue** for failed job handling
+| Decision | Optimized For | Trade-off |
+|----------|---------------|-----------|
+| Isolated NLP worker container | API memory stability (~200MB vs ~2GB with models loaded) | Extra container orchestration complexity |
+| Circuit breaker + DLQ | Graceful degradation when models fail | Eventual consistency — posts analyzed on retry, not immediately |
+| BERTopic with seed topics | Consistent topic categories across runs | Less dynamic than fully unsupervised clustering |
+| Valkey cache for aggregations | Sub-50ms dashboard loads on cached data | Stale reads between aggregation cycles (up to 6 hours) |
+| Session-based anonymous feedback | Privacy-first — no user accounts required for MVP | Limited per-user analytics |
+| APScheduler in-process | Zero additional infrastructure for scheduling | Single point of failure — moves to message queue in roadmap |
 
 ---
 
 ## Security
 
-- All API keys in environment variables (never committed)
-- SQLAlchemy ORM (SQL injection prevention)
-- Pydantic validation on all inputs
+- Environment-variable-only secrets (never committed, validated at startup)
+- SQLAlchemy ORM with parameterized queries (SQL injection prevention)
+- Pydantic validation on all request/response boundaries
 - CORS restricted to frontend origin
-- Error responses don't leak stack traces
-- Session IDs for anonymous feedback tracking
+- Structured error responses (no stack trace leakage)
+- Toxicity filtering before any content reaches the dashboard
+- Session IDs for anonymous feedback rate limiting
 
 ---
 
-## Contributing
+## Vision
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+CommunityPulse started as a way to answer a simple question: *what is the gaming community actually talking about right now?* The answer required pulling data from fragmented sources, applying NLP at scale, and surfacing results through an intuitive dashboard.
+
+The technical approach prioritizes reliability and observability. Every model call is wrapped in a circuit breaker. Failed analyses land in a dead letter queue with automatic retry. The NLP worker runs in isolation so a model crash never takes down the API. Ingestion adapters share a common interface, making it straightforward to add new data sources.
+
+Looking ahead, the roadmap moves from scheduled polling to event-driven ingestion, adds WebSocket push for real-time updates, and introduces user accounts with customizable alert thresholds. The architecture is designed to scale horizontally — the NLP worker is the natural first candidate for pod autoscaling under load.
 
 ---
 
 ## License
 
 MIT License - See LICENSE file for details.
-
----
-
-*CommunityPulse - Know what the game community is talking about, instantly.*
