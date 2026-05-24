@@ -1,74 +1,108 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Feedback System', () => {
-	test('should display feedback buttons on topic cards', async ({ page }) => {
+/**
+ * FEEDBACK WIRING (UI -> API -> DB).
+ *
+ * Converted from a render-only spec full of `if (await el.isVisible())` guards
+ * and console.log "assertions". Each test now drives the real control, awaits
+ * the real POST it triggers, and asserts the API accepted it.
+ *
+ * Endpoints exercised: POST /api/feedback/general, /vote, /report.
+ */
+
+/** Load the homepage and return the first real topic slug from the DB. */
+async function firstRealSlug(page: import('@playwright/test').Page): Promise<string> {
+	const topicsPromise = page.waitForResponse(
+		(resp) =>
+			new URL(resp.url()).pathname.endsWith('/api/dashboard/topics') &&
+			resp.request().method() === 'GET',
+		{ timeout: 30_000 }
+	);
+	await page.goto('/');
+	const body = await (await topicsPromise).json();
+	expect(body.topics.length, 'expected at least one topic in the DB').toBeGreaterThan(0);
+	return body.topics[0].slug as string;
+}
+
+test.describe('General feedback wiring', () => {
+	test('floating feedback button submits to the real backend', async ({ page }) => {
+		// Wait for a mount-time API call so the page has hydrated before we click
+		// (the floating button's onclick isn't wired until hydration completes).
+		const hydrated = page.waitForResponse(
+			(resp) =>
+				new URL(resp.url()).pathname.endsWith('/api/dashboard/stats') &&
+				resp.request().method() === 'GET',
+			{ timeout: 30_000 }
+		);
 		await page.goto('/');
-		await page.waitForLoadState('networkidle');
+		await hydrated;
 
-		// Look for thumbs up/down buttons or feedback controls
-		const feedbackButtons = page.locator('[data-feedback], .feedback-buttons, button[aria-label*="thumb"]');
-		const count = await feedbackButtons.count();
-		console.log(`Found ${count} feedback button areas`);
-	});
+		await page.locator('button.floating-btn').click();
+		const dialog = page.getByRole('dialog', { name: /send feedback/i });
+		await expect(dialog).toBeVisible();
 
-	test('should be able to vote on topic', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
+		await dialog.locator('#feedback-message').fill('e2e wiring check: general feedback');
 
-		// Find a thumbs up button
-		const thumbsUp = page.locator('button:has-text("thumbs up"), button[aria-label*="up"], [data-vote="up"]').first();
+		const postPromise = page.waitForResponse(
+			(resp) =>
+				new URL(resp.url()).pathname.endsWith('/api/feedback/general') &&
+				resp.request().method() === 'POST',
+			{ timeout: 30_000 }
+		);
+		await dialog.getByRole('button', { name: /^send feedback$/i }).click();
 
-		if (await thumbsUp.isVisible()) {
-			await thumbsUp.click();
-			// Voting should provide some visual feedback
-			await expect(thumbsUp).toBeVisible();
-		}
-	});
+		const resp = await postPromise;
+		expect(resp.ok(), `general feedback POST failed: ${resp.status()}`).toBeTruthy();
 
-	test('should show floating feedback button', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
-
-		// Look for floating feedback button
-		const floatingButton = page.locator('.floating-feedback, button[aria-label*="feedback"], [data-floating-feedback]');
-
-		if (await floatingButton.first().isVisible()) {
-			await expect(floatingButton.first()).toBeVisible();
-		}
-	});
-
-	test('should open feedback modal when floating button clicked', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
-
-		// Find floating feedback button
-		const floatingButton = page.locator('.floating-feedback-button, [data-floating-feedback]').first();
-
-		if (await floatingButton.isVisible()) {
-			await floatingButton.click();
-
-			// Look for modal/dialog
-			const modal = page.locator('[role="dialog"], .modal, .feedback-modal');
-			await expect(modal.first()).toBeVisible();
-		}
+		// The real success state rendered (not the still-open form or an error).
+		await expect(dialog.getByText(/thank you for your feedback/i)).toBeVisible();
 	});
 });
 
-test.describe('Report Modal', () => {
-	test('should be able to open report modal', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
+test.describe('Topic feedback wiring', () => {
+	test('voting on a topic submits to the real backend', async ({ page }) => {
+		const slug = await firstRealSlug(page);
+		await page.goto(`/topics/${slug}`);
+		await expect(page.locator('h1.topic-name')).toBeVisible();
 
-		// Find report button
-		const reportButton = page.locator('button:has-text("Report"), button:has-text("report"), [data-report]').first();
+		const postPromise = page.waitForResponse(
+			(resp) =>
+				new URL(resp.url()).pathname.endsWith('/api/feedback/vote') &&
+				resp.request().method() === 'POST',
+			{ timeout: 30_000 }
+		);
+		await page.locator('.vote-btn').first().click();
 
-		if (await reportButton.isVisible()) {
-			await reportButton.click();
+		const resp = await postPromise;
+		expect(resp.ok(), `vote POST failed: ${resp.status()}`).toBeTruthy();
 
-			// Modal should appear
-			const modal = page.locator('[role="dialog"], .modal, .report-modal');
-			const isVisible = await modal.first().isVisible().catch(() => false);
-			console.log(`Report modal visible: ${isVisible}`);
-		}
+		// The voted button reflects the recorded vote.
+		await expect(page.locator('.vote-btn').first()).toHaveClass(/active/);
+	});
+
+	test('reporting a topic submits to the real backend', async ({ page }) => {
+		const slug = await firstRealSlug(page);
+		await page.goto(`/topics/${slug}`);
+		await expect(page.locator('h1.topic-name')).toBeVisible();
+
+		await page.getByRole('button', { name: /report issue/i }).click();
+		const dialog = page.getByRole('dialog', { name: /report issue/i });
+		await expect(dialog).toBeVisible();
+
+		// Pick a reason (Submit is disabled until one is selected).
+		await dialog.getByText('Misleading summary').click();
+
+		const postPromise = page.waitForResponse(
+			(resp) =>
+				new URL(resp.url()).pathname.endsWith('/api/feedback/report') &&
+				resp.request().method() === 'POST',
+			{ timeout: 30_000 }
+		);
+		await dialog.getByRole('button', { name: /submit report/i }).click();
+
+		const resp = await postPromise;
+		expect(resp.ok(), `report POST failed: ${resp.status()}`).toBeTruthy();
+
+		await expect(dialog.getByText(/thank you for your feedback/i)).toBeVisible();
 	});
 });

@@ -1,58 +1,70 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Topic Pages', () => {
-	test('should display topic cards on dashboard', async ({ page }) => {
-		await page.goto('/');
+/**
+ * TOPIC DETAIL WIRING (UI -> API -> DB).
+ *
+ * Converted from a render-only spec. The old version navigated to `/topic/...`
+ * (singular) -- a route that does not exist; the real route is `/topics/[slug]`.
+ * Each test now sources a real slug from the live `/api/dashboard/topics`
+ * response, navigates to that topic, asserts the detail API answered, and
+ * asserts the real topic data rendered.
+ */
 
-		// Wait for page to load
-		await page.waitForLoadState('networkidle');
+/** Load the homepage and return the first real topic slug + name from the DB. */
+async function firstRealTopic(page: import('@playwright/test').Page) {
+	const topicsPromise = page.waitForResponse(
+		(resp) =>
+			new URL(resp.url()).pathname.endsWith('/api/dashboard/topics') &&
+			resp.request().method() === 'GET',
+		{ timeout: 30_000 }
+	);
+	await page.goto('/');
+	const body = await (await topicsPromise).json();
+	expect(body.topics.length, 'expected at least one topic in the DB').toBeGreaterThan(0);
+	return body.topics[0] as { slug: string; name: string };
+}
 
-		// Look for topic cards or similar content containers
-		const content = page.locator('.topic-card, .card, article, [data-topic]');
+test.describe('Topic detail wiring (UI -> API -> DB)', () => {
+	test('topic page fetches its slug from the real backend and renders it', async ({ page }) => {
+		const topic = await firstRealTopic(page);
 
-		// If no topics, that's okay - the app might not have data loaded
-		const count = await content.count();
-		console.log(`Found ${count} topic elements`);
+		const detailPromise = page.waitForResponse(
+			(resp) =>
+				new URL(resp.url()).pathname.endsWith(
+					`/api/dashboard/topics/${encodeURIComponent(topic.slug)}`
+				) && resp.request().method() === 'GET',
+			{ timeout: 30_000 }
+		);
+
+		await page.goto(`/topics/${topic.slug}`);
+
+		const detailResp = await detailPromise;
+		expect(detailResp.ok(), `topic detail API failed: ${detailResp.status()}`).toBeTruthy();
+
+		const detail = await detailResp.json();
+		expect(detail.name, 'topic detail returned no name').toBeTruthy();
+
+		// Real data rendered: the heading shows the topic's real name, not an error state.
+		const heading = page.locator('h1.topic-name');
+		await expect(heading).toBeVisible();
+		await expect(heading).toContainText(detail.name);
+		await expect(page.getByText(/failed to load|something went wrong/i)).toHaveCount(0);
 	});
 
-	test('should navigate to topic detail page', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
+	test('following a topic persists across reloads (client-side tracking)', async ({ page }) => {
+		const topic = await firstRealTopic(page);
+		await page.goto(`/topics/${topic.slug}`);
+		await expect(page.locator('h1.topic-name')).toBeVisible();
 
-		// Try to find a clickable topic link
-		const topicLink = page.locator('a[href*="/topic/"]').first();
+		const followBtn = page.locator('button.follow-btn').first();
+		await expect(followBtn).toHaveAttribute('aria-pressed', 'false');
 
-		if (await topicLink.isVisible()) {
-			await topicLink.click();
-			await expect(page).toHaveURL(/\/topic\//);
-		}
-	});
+		await followBtn.click();
+		await expect(followBtn).toHaveAttribute('aria-pressed', 'true');
 
-	test('should display sentiment information on topic page', async ({ page }) => {
-		// Navigate to a topic page directly (if it exists)
-		await page.goto('/topic/balance');
-		await page.waitForLoadState('networkidle');
-
-		// Check if page loaded (may show 404 if no data)
-		const body = page.locator('body');
-		await expect(body).toBeVisible();
-	});
-});
-
-test.describe('Topic Following', () => {
-	test('should be able to follow a topic', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
-
-		// Look for follow buttons
-		const followButton = page.locator('button:has-text("Follow"), button:has-text("follow"), [data-follow]').first();
-
-		if (await followButton.isVisible()) {
-			// Click to follow
-			await followButton.click();
-
-			// Check for visual feedback
-			await expect(followButton).toBeVisible();
-		}
+		// Persisted to localStorage -> survives a reload (this is what feeds the digest).
+		await page.reload();
+		await expect(page.locator('h1.topic-name')).toBeVisible();
+		await expect(page.locator('button.follow-btn').first()).toHaveAttribute('aria-pressed', 'true');
 	});
 });
