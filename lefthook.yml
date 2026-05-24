@@ -1,0 +1,13 @@
+# Git-layer anti-phantom gate. Same scripts/verify.py the Claude Stop hook and the
+# autonomous-agent done-gate call -- one source of truth, zero drift between agent and git gates.
+# Lefthook (not Husky): Husky's prepare script overwrites committed hook files on npm install.
+
+pre-commit:
+  commands:
+    verify-fast:
+      run: python scripts/verify.py
+
+pre-push:
+  commands:
+    verify-full:
+      run: python scripts/verify.py --full

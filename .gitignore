@@ -61,6 +61,11 @@ portfolio-test-output/
 # Generated tool outputs
 shadow-clone-output/
 
+# Shadow-clone sync state — LOCAL ONLY, never publish (contains private source
+# repo name + the reverse rename mapping = the competitive intel we scrub).
+.shadow-clone-meta.json
+.shadow-clone-rules.json
+
 # Large binary files
 *.mp4
 
