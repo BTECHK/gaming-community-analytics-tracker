@@ -185,7 +185,7 @@
 					<h2 class="section-title">What People Are Saying</h2>
 					{#if topic.quotes && topic.quotes.length > 0}
 						<div class="quotes-list">
-							{#each topic.quotes as quote (quote.source_url)}
+							{#each topic.quotes as quote, i (`${quote.source_url}-${i}`)}
 								<QuoteCard {quote} />
 							{/each}
 						</div>
