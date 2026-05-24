@@ -14,7 +14,7 @@ from app.database import get_engine, get_session_factory
 from app.ingestion.adapters import (
     YouTubeAdapter,
     get_quota_tracker,
-    RiotAdapter,
+    OfficialNewsAdapter,
     TierSiteAdapter,
     GoogleTrendsAdapter,
     GuideSiteAdapter,
@@ -95,7 +95,7 @@ async def youtube_ingestion_job() -> None:
             await session.close()
 
 
-async def riot_ingestion_job() -> None:
+async def official_news_ingestion_job() -> None:
     """Scheduled job to ingest OfficialNews news."""
     logger.info("Starting scheduled OfficialNews ingestion")
 
@@ -104,12 +104,12 @@ async def riot_ingestion_job() -> None:
 
     async with session_factory() as session:
         try:
-            adapter = RiotAdapter()
+            adapter = OfficialNewsAdapter()
             service = IngestionService(session)
             service.register_adapter(adapter)
 
             settings = get_settings()
-            result = await service.ingest_from("official-news", limit=settings.riot_fetch_limit)
+            result = await service.ingest_from("official-news", limit=settings.official_news_fetch_limit)
 
             logger.info(
                 "OfficialNews ingestion complete: fetched=%d, upserted=%d",
@@ -474,10 +474,10 @@ def configure_scheduler(sched: AsyncIOScheduler) -> None:
 
     # OfficialNews job (always enabled - no API key needed)
     sched.add_job(
-        riot_ingestion_job,
+        official_news_ingestion_job,
         "interval",
         hours=6,
-        id="riot_ingestion",
+        id="official_news_ingestion",
         name="Official News Ingestion",
         replace_existing=True,
     )

@@ -79,14 +79,14 @@ class TestDigestService:
         """Test building context from topics."""
         topics = [
             {
-                "name": "Champion Balance",
+                "name": "Character Balance",
                 "summary": "Discussion about nerfs and buffs",
                 "sentiment": {"positive": 30, "negative": 50, "neutral": 20},
                 "post_count": 100,
             }
         ]
         context = _build_topic_context(topics)
-        assert "Champion Balance" in context
+        assert "Character Balance" in context
         assert "nerfs and buffs" in context
         assert "negative" in context
         assert "100 posts" in context
@@ -150,8 +150,8 @@ class TestDigestService:
         """Test digest summary with topics uses fallback when no API key."""
         topics = [
             {
-                "name": "Champion Updates",
-                "summary": "New champion reworks",
+                "name": "Character Updates",
+                "summary": "New character reworks",
                 "sentiment": {"positive": 50, "negative": 20, "neutral": 30},
                 "post_count": 75,
             }
@@ -159,4 +159,4 @@ class TestDigestService:
         result = await generate_digest_summary(topics)
         assert result["topic_count"] == 1
         assert result["is_ai_generated"] is False
-        assert "Champion Updates" in result["summary"] or "1 topic" in result["summary"]
+        assert "Character Updates" in result["summary"] or "1 topic" in result["summary"]

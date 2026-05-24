@@ -150,7 +150,7 @@ class NLPService:
         """Extract text to analyze from a post.
 
         Combines title and content for better topic detection context.
-        Title provides topic hints (champion names, event names) while
+        Title provides topic hints (character names, event names) while
         content provides sentiment details.
 
         Args:

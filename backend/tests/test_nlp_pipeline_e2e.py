@@ -58,8 +58,8 @@ async def test_full_pipeline_ingest_nlp_verify(test_session: AsyncSession):
     """Insert posts → run NLP with mocked models → verify sentiment in DB."""
     # 1. Simulate ingestion: insert posts
     posts = [
-        _make_post("Patch 16.2 is great", "Loving the balance changes", Platform.REDDIT),
-        _make_post("New champion release", "The kit looks interesting", Platform.YOUTUBE),
+        _make_post("Patch 4.2 is great", "Loving the balance changes", Platform.REDDIT),
+        _make_post("New character release", "The kit looks interesting", Platform.YOUTUBE),
         _make_post("Matchmaking issues", "Queue times are too long", Platform.REDDIT),
         _make_post("Ranked changes", "The LP system needs work", Platform.TierSite),
     ]
@@ -76,7 +76,7 @@ async def test_full_pipeline_ingest_nlp_verify(test_session: AsyncSession):
     ]
     topics = [
         TopicResult(["balance"], [0], [0.9], ["Balance"], [["nerf", "buff"]]),
-        TopicResult(["champion-release"], [1], [0.85], ["Champion Release"], [["kit", "abilities"]]),
+        TopicResult(["character-release"], [1], [0.85], ["Character Release"], [["kit", "abilities"]]),
         TopicResult(["matchmaking"], [2], [0.8], ["Matchmaking"], [["queue", "mmr"]]),
         TopicResult(["ranked"], [3], [0.75], ["Ranked"], [["lp", "ladder"]]),
     ]

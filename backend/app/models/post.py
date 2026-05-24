@@ -16,7 +16,7 @@ class Platform(str, enum.Enum):
     """Supported content platforms."""
 
     YOUTUBE = "youtube"
-    RIOT = "official-news"
+    OFFICIAL_NEWS = "official-news"
     TierSite = "tier-site"
     GOOGLE_TRENDS = "google_trends"
     GUIDE_SITE = "guide-site"

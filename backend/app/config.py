@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     youtube_daily_quota_limit: int = 9000  # Safety buffer below 10k free tier
 
     # Official News (publisher feeds)
-    riot_locale: str = "en-us"  # Locale for official news API
-    riot_fetch_limit: int = 50  # Max items per fetch
+    official_news_locale: str = "en-us"  # Locale for official news API
+    official_news_fetch_limit: int = 50  # Max items per fetch
 
     # TierSite Scraping
     tiersite_fetch_limit: int = 50  # Max items per fetch

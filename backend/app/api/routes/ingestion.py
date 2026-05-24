@@ -13,7 +13,7 @@ from app.ingestion.adapters import (
     YouTubeAdapter,
     YouTubeQuotaError,
     get_quota_tracker,
-    RiotAdapter,
+    OfficialNewsAdapter,
     TierSiteAdapter,
     GoogleTrendsAdapter,
     GuideSiteAdapter,
@@ -78,7 +78,7 @@ def _get_adapter(platform: str):
     if platform == "youtube":
         return YouTubeAdapter()
     if platform == "official-news":
-        return RiotAdapter()
+        return OfficialNewsAdapter()
     if platform == "tier-site":
         return TierSiteAdapter()
     if platform == "google_trends":
@@ -223,16 +223,16 @@ async def trigger_youtube_ingestion(session: SessionDep) -> dict:
 
 
 @router.post("/ingestion/official-news")
-async def trigger_riot_ingestion(session: SessionDep) -> dict:
+async def trigger_official_news_ingestion(session: SessionDep) -> dict:
     """Manually trigger OfficialNews news ingestion."""
     settings = get_settings()
 
-    adapter = RiotAdapter()
+    adapter = OfficialNewsAdapter()
     service = IngestionService(session)
     service.register_adapter(adapter)
 
     try:
-        result = await service.ingest_from("official-news", limit=settings.riot_fetch_limit)
+        result = await service.ingest_from("official-news", limit=settings.official_news_fetch_limit)
         await adapter.close()
         return {
             "source": "official-news",
@@ -418,7 +418,7 @@ async def get_ingestion_status() -> AllSourcesStatus:
             ),
             "official-news": SourceStatus(
                 enabled=True,
-                locale=settings.riot_locale,
+                locale=settings.official_news_locale,
             ),
             "tier-site": SourceStatus(
                 enabled=True,

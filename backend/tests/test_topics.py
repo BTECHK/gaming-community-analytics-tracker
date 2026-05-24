@@ -117,12 +117,12 @@ class TestSeedTopicList:
         assert "crash" in client_seeds
         assert "lag" in client_seeds
 
-    def test_champion_keywords(self):
-        """Test champion seed topic has key terms."""
-        champion_seeds = SEED_TOPIC_LIST[4]
-        assert "champion" in champion_seeds
-        assert "rework" in champion_seeds
-        assert "skin" in champion_seeds
+    def test_character_keywords(self):
+        """Test character seed topic has key terms."""
+        character_seeds = SEED_TOPIC_LIST[4]
+        assert "character" in character_seeds
+        assert "rework" in character_seeds
+        assert "skin" in character_seeds
 
 
 class TestSimilarityThreshold:

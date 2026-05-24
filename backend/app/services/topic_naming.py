@@ -22,7 +22,7 @@ FALLBACK_TOPIC_NAMES = {
     "toxic": "Player Behavior",
     "balance": "Game Balance",
     "client": "Client Issues",
-    "champion": "Champions & Abilities",
+    "character": "Characters & Abilities",
     "meta": "Meta Discussion",
     "patch": "Patch Notes",
     "skin": "Skins & Cosmetics",
@@ -30,7 +30,7 @@ FALLBACK_TOPIC_NAMES = {
     "bug": "Bugs & Glitches",
     "ranked": "Ranked Play",
     "nerf": "Nerfs & Buffs",
-    "rework": "Champion Reworks",
+    "rework": "Character Reworks",
     "new": "New Content",
     "server": "Server Issues",
 }
